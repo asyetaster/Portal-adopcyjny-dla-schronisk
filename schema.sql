@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS users (
+    id   INTEGER PRIMARY KEY,
+    name VARCHAR(100) NOT NULL CHECK (length(name) BETWEEN 1 AND 100)
+);
