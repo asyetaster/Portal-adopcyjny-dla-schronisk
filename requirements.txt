@@ -1,0 +1,5 @@
+# Flask jest serwerem http a SQLAlchemy do połączenia z bazą danych
+
+Flask>=3.0
+Flask-WTF>=1.2
+SQLAlchemy>=2.0

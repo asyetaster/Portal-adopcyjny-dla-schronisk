@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Użytkownicy{% endblock %}</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
+    .message { background: #e6f4ea; border: 1px solid #9ccfa8; padding: .5rem .75rem; }
+    label, input, button { font-size: 1rem; }
+  </style>
+</head>
+<body>
+  <nav><a href="{{ url_for('user_list') }}">Lista użytkowników</a></nav>
+  {% for flashed in get_flashed_messages() %}
+    <p class="message">{{ flashed }}</p>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</body>
+</html>

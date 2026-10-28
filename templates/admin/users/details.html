@@ -1,0 +1,22 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ user.name }}{% endblock %}
+{% block content %}
+  <h1>{{ user.name }}</h1>
+  {% if message %}
+    <p class="message">{{ message }}</p>
+  {% endif %}
+  <dl>
+    <dt>ID</dt><dd>{{ user.id }}</dd>
+    <dt>Nazwa</dt><dd>{{ user.name }}</dd>
+  </dl>
+
+  <h2>Zmień nazwę</h2>
+  <form method="post" action="{{ url_for('update_user', user_id=user.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>
+      Nowa nazwa
+      <input type="text" name="new_name" value="{{ user.name }}" maxlength="100" required>
+    </label>
+    <button type="submit">Zapisz</button>
+  </form>
+{% endblock %}
