@@ -1,22 +1,29 @@
 {% extends "admin/base.html" %}
 {% block title %}{{ user.name }}{% endblock %}
 {% block content %}
-  <h1>{{ user.name }}</h1>
-  {% if message %}
-    <p class="message">{{ message }}</p>
-  {% endif %}
-  <dl>
-    <dt>ID</dt><dd>{{ user.id }}</dd>
-    <dt>Nazwa</dt><dd>{{ user.name }}</dd>
-  </dl>
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+          <h1 class="h4 mb-1">{{ user.name }}</h1>
+          <p class="text-secondary mb-0">Szczegóły użytkownika</p>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="{{ url_for('user_edit', user_id=user.id) }}" class="btn btn-primary">
+            <i class="bi bi-pencil me-1"></i> Edytuj
+          </a>
+          <a href="{{ url_for('user_list') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Wróć do listy
+          </a>
+        </div>
+      </div>
 
-  <h2>Zmień nazwę</h2>
-  <form method="post" action="{{ url_for('update_user', user_id=user.id) }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label>
-      Nowa nazwa
-      <input type="text" name="new_name" value="{{ user.name }}" maxlength="100" required>
-    </label>
-    <button type="submit">Zapisz</button>
-  </form>
+      <div class="card">
+        <div class="card-body">
+          <dl class="row mb-0">
+            <dt class="col-sm-3 col-md-2 text-secondary">ID</dt>
+            <dd class="col-sm-9 col-md-10">{{ user.id }}</dd>
+            <dt class="col-sm-3 col-md-2 text-secondary">Nazwa</dt>
+            <dd class="col-sm-9 col-md-10">{{ user.name }}</dd>
+          </dl>
+        </div>
+      </div>
 {% endblock %}
