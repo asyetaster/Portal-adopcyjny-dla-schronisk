@@ -1,24 +1,103 @@
 {% extends "admin/base.html" %}
+{% from "_pagination.html" import pagination as pagination_nav %}
 {% block title %}Użytkownicy{% endblock %}
 {% block content %}
-  <h1>Użytkownicy</h1>
-  {% if users %}
-    <ul>
-      {% for user in users %}
-        <li><a href="{{ url_for('user_details', user_id=user.id) }}">{{ user.name }}</a> (id {{ user.id }})</li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p>Brak użytkowników.</p>
-  {% endif %}
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+      <div>
+        <h1 class="h4 mb-1">Użytkownicy</h1>
+        <p class="text-secondary mb-0">Zarządzaj kontami użytkowników</p>
+      </div>
 
-  <h2>Dodaj użytkownika</h2>
-  <form method="post" action="{{ url_for('add_user') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label>
-      Nazwa
-      <input type="text" name="name" maxlength="100" required>
-    </label>
-    <button type="submit">Dodaj</button>
-  </form>
+      <a href="{{ url_for('user_new') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i> Dodaj użytkownika
+      </a>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+
+        <!-- Filters -->
+        <div class="row g-2 mb-3">
+          <div class="col-md-5">
+            <div class="input-group">
+              <span class="input-group-text bg-white">
+                <i class="bi bi-search"></i>
+              </span>
+              <input type="search" class="form-control" placeholder="Szukaj po nazwie lub e-mailu...">
+            </div>
+          </div>
+
+          <div class="col-md-3">
+            <select class="form-select">
+              <option selected>Wszystkie statusy</option>
+              <option>Aktywny</option>
+              <option>Nieaktywny</option>
+              <option>Zablokowany</option>
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <select class="form-select">
+              <option selected>Sortuj: najnowsze</option>
+              <option>Nazwa A-Z</option>
+              <option>Nazwa Z-A</option>
+            </select>
+          </div>
+
+          <div class="col-md-1 d-grid">
+            <button class="btn btn-outline-secondary">Filtruj</button>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Użytkownik</th>
+                <th>E-mail</th>
+                <th>Rola</th>
+                <th>Status</th>
+                <th>Data rejestracji</th>
+                <th class="text-end">Akcje</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for user in users %}
+              <tr>
+                <td>
+                  <small class="text-secondary">{{ user.id }}</small>
+                </td>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <img src="https://i.pravatar.cc/80?img=45" class="avatar" alt="">
+                    <div>
+                      <div class="fw-semibold">{{ user.name }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>kasia@example.com</td>
+                <td><span class="badge text-bg-info">Editor</span></td>
+                <td><span class="badge text-bg-success">Aktywny</span></td>
+                <td>22.10.2026</td>
+                <td class="text-end">
+                  <a href="{{ url_for('user_details', user_id=user.id) }}" class="btn btn-sm btn-outline-secondary me-1">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+<!--                  <a href="" class="btn btn-sm btn-outline-danger">-->
+<!--                    <i class="bi bi-trash"></i>-->
+<!--                  </a>-->
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Paginacja -->
+        {{ pagination_nav(pagination, "user_list") }}
+
+      </div>
+    </div>
 {% endblock %}

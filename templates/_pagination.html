@@ -1,0 +1,50 @@
+{# Reużywalna paginacja dla list (tabel/kart).
+
+   Użycie w szablonie:
+     {% from "_pagination.html" import pagination as pagination_nav %}
+     {{ pagination_nav(pagination, "user_list") }}
+
+   `pagination` — słownik z metadanymi zwracany przez query (page, limit,
+       total, total_pages, has_next, has_previous).
+   `endpoint` — nazwa trasy Flaska, do której budujemy linki (url_for).
+   `**kwargs` — dodatkowe parametry URL przekazywane do url_for, np. filtry:
+       {{ pagination_nav(pagination, "user_list", q=foo, status="active") }}
+   (Jinja zbiera nadmiarowe argumenty nazwane w magicznej zmiennej `kwargs`.)
+#}
+{% macro pagination(p, endpoint) %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-3">
+  <small class="text-secondary">
+    {%- if p.total == 0 %}
+      Brak rekordów
+    {%- else %}
+      Wyświetlanie {{ (p.page - 1) * p.limit + 1 }}–{{ [p.page * p.limit, p.total] | min }} z {{ p.total }} rekordów
+    {%- endif %}
+  </small>
+
+  {%- if p.total_pages > 1 %}
+  <nav aria-label="Paginacja">
+    <ul class="pagination pagination-sm mb-0">
+      <li class="page-item {{ 'disabled' if not p.has_previous else '' }}">
+        {%- if p.has_previous %}
+        <a class="page-link" href="{{ url_for(endpoint, page=p.page - 1, **kwargs) }}">Poprzednia</a>
+        {%- else %}
+        <span class="page-link">Poprzednia</span>
+        {%- endif %}
+      </li>
+      {% for n in range(1, p.total_pages + 1) %}
+      <li class="page-item {{ 'active' if n == p.page else '' }}">
+        <a class="page-link" href="{{ url_for(endpoint, page=n, **kwargs) }}">{{ n }}</a>
+      </li>
+      {% endfor %}
+      <li class="page-item {{ 'disabled' if not p.has_next else '' }}">
+        {%- if p.has_next %}
+        <a class="page-link" href="{{ url_for(endpoint, page=p.page + 1, **kwargs) }}">Następna</a>
+        {%- else %}
+        <span class="page-link">Następna</span>
+        {%- endif %}
+      </li>
+    </ul>
+  </nav>
+  {%- endif %}
+</div>
+{% endmacro %}

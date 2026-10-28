@@ -1,4 +1,4 @@
-from flask import Flask, abort
+from flask import Flask, abort, flash, redirect, url_for
 
 from operations.user.GetUserQuery import GetUserQuery
 from operations.user.UpdateUserCommand import UpdateUserCommand
@@ -14,11 +14,10 @@ def register(app: Flask) -> None:
         update_user: UpdateUserCommand,
         get_user: GetUserQuery,
     ):
-        new_name = read_user_name("new_name")
+        new_name = read_user_name("name")
         if get_user.execute(user_id) is None:
             abort(404)
         update_user.execute(user_id, new_name)
-        return {
-            "user": get_user.execute(user_id),
-            "message": "Zmieniono nazwę użytkownika.",
-        }
+        flash("Zmieniono nazwę użytkownika.")
+        # Post/Redirect/Get: @page robi commit i zwraca przekierowanie bez renderowania.
+        return redirect(url_for("user_details", user_id=user_id), code=303)
