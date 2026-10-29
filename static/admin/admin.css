@@ -1,0 +1,205 @@
+/* =========================================================================
+   Panel administracyjny — arkusz stylów
+   Paleta: indygowo-łupkowa (slate/indigo). Prosty, ale dopracowany motyw
+   nadbudowany na Bootstrap 5. Edycja kolorów: zmień zmienne w :root.
+   ========================================================================= */
+
+:root {
+  /* Tła i powierzchnie */
+  --admin-bg: #eef2f7;
+  --admin-surface: #ffffff;
+  --admin-border: #e2e8f0;
+
+  /* Sidebar (gradient) */
+  --admin-sidebar-from: #312e81;   /* indigo-900  */
+  --admin-sidebar-to: #1e1b4b;     /* indigo-950  */
+  --admin-sidebar-text: rgba(255, 255, 255, .72);
+  --admin-sidebar-text-active: #ffffff;
+  --admin-sidebar-hover: rgba(255, 255, 255, .12);
+  --admin-sidebar-active: rgba(255, 255, 255, .16);
+  --admin-sidebar-accent: #818cf8; /* indigo-300 — pasek aktywnego linku */
+
+  /* Akcent (przyciski, linki, fokus) */
+  --admin-primary: #4f46e5;        /* indigo-600 */
+  --admin-primary-hover: #4338ca; /* indigo-700 */
+  --admin-primary-soft: #eef2ff;   /* indigo-50  */
+  --admin-focus-ring: rgba(99, 102, 241, .25);
+
+  /* Tekst */
+  --admin-text: #1e293b;           /* slate-800 */
+  --admin-text-muted: #64748b;     /* slate-500 */
+
+  /* Cienie */
+  --admin-shadow-sm: 0 1px 2px rgba(15, 23, 42, .04);
+  --admin-shadow: 0 4px 16px rgba(15, 23, 42, .06);
+}
+
+/* ---------- Podstawy ---------- */
+
+body {
+  background: var(--admin-bg);
+  color: var(--admin-text);
+}
+
+/* ---------- Sidebar ---------- */
+
+.admin-sidebar {
+  width: 260px;
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--admin-sidebar-from) 0%, var(--admin-sidebar-to) 100%);
+  color: var(--admin-sidebar-text);
+  border-right: 1px solid rgba(255, 255, 255, .06);
+}
+
+.admin-sidebar .brand {
+  color: var(--admin-sidebar-text-active);
+}
+
+.admin-sidebar .nav-link {
+  position: relative;
+  color: var(--admin-sidebar-text);
+  border-radius: .6rem;
+  padding: .6rem .9rem;
+  transition: background-color .18s ease, color .18s ease;
+}
+
+.admin-sidebar .nav-link:hover {
+  background: var(--admin-sidebar-hover);
+  color: var(--admin-sidebar-text-active);
+}
+
+.admin-sidebar .nav-link.active {
+  background: var(--admin-sidebar-active);
+  color: var(--admin-sidebar-text-active);
+}
+
+/* Pasek aktywnego linku po lewej */
+.admin-sidebar .nav-link.active::before {
+  content: "";
+  position: absolute;
+  left: -1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 60%;
+  border-radius: 999px;
+  background: var(--admin-sidebar-accent);
+}
+
+/* ---------- Karty ---------- */
+
+.card {
+  border: 1px solid var(--admin-border);
+  border-radius: 1rem;
+  background: var(--admin-surface);
+  box-shadow: var(--admin-shadow);
+}
+
+.card-body {
+  padding: 1.25rem 1.5rem;
+}
+
+/* ---------- Tabele ---------- */
+
+.table thead th {
+  font-size: .72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--admin-text-muted);
+  border-bottom: 1px solid var(--admin-border);
+  white-space: nowrap;
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+.table-hover > tbody > tr {
+  transition: background-color .15s ease;
+}
+
+.table-hover > tbody > tr:hover > * {
+  --bs-table-bg-state: var(--admin-primary-soft);
+}
+
+/* ---------- Formularze ---------- */
+
+.form-label {
+  font-weight: 500;
+  color: var(--admin-text);
+}
+
+.form-control:focus,
+.form-check-input:focus {
+  border-color: var(--admin-primary);
+  box-shadow: 0 0 0 .2rem var(--admin-focus-ring);
+}
+
+/* ---------- Przyciski ---------- */
+
+.btn-primary {
+  --bs-btn-bg: var(--admin-primary);
+  --bs-btn-border-color: var(--admin-primary);
+  --bs-btn-hover-bg: var(--admin-primary-hover);
+  --bs-btn-hover-border-color: var(--admin-primary-hover);
+  --bs-btn-active-bg: var(--admin-primary-hover);
+  --bs-btn-active-border-color: var(--admin-primary-hover);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--admin-primary);
+  --bs-btn-border-color: var(--admin-primary);
+  --bs-btn-hover-bg: var(--admin-primary);
+  --bs-btn-hover-border-color: var(--admin-primary);
+  --bs-btn-active-bg: var(--admin-primary);
+  --bs-btn-active-border-color: var(--admin-primary);
+}
+
+/* ---------- Badge'e ---------- */
+
+.badge {
+  font-weight: 500;
+  letter-spacing: .01em;
+}
+
+/* ---------- Avatar ---------- */
+
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--admin-surface);
+  box-shadow: var(--admin-shadow-sm);
+}
+
+/* ---------- Flash / komunikaty ---------- */
+
+.message {
+  background: #e6f4ea;
+  border: 1px solid #9ccfa8;
+  padding: .5rem .75rem;
+  border-radius: .5rem;
+}
+
+/* ---------- Subtelny pasek przewijania ---------- */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
