@@ -1,29 +1,82 @@
 {% extends "admin/base.html" %}
-{% block title %}{{ user.name }}{% endblock %}
-{% block content %}
-      <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-        <div>
-          <h1 class="h4 mb-1">{{ user.name }}</h1>
-          <p class="text-secondary mb-0">Szczegóły użytkownika</p>
-        </div>
-        <div class="d-flex gap-2">
-          <a href="{{ url_for('user_edit', user_id=user.id) }}" class="btn btn-primary">
-            <i class="bi bi-pencil me-1"></i> Edytuj
-          </a>
-          <a href="{{ url_for('user_list') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i> Wróć do listy
-          </a>
-        </div>
-      </div>
 
-      <div class="card">
-        <div class="card-body">
-          <dl class="row mb-0">
-            <dt class="col-sm-3 col-md-2 text-secondary">ID</dt>
-            <dd class="col-sm-9 col-md-10">{{ user.id }}</dd>
-            <dt class="col-sm-3 col-md-2 text-secondary">Nazwa</dt>
-            <dd class="col-sm-9 col-md-10">{{ user.name }}</dd>
-          </dl>
-        </div>
-      </div>
+{% block title %}{{ user.first_name }} {{ user.last_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h1 class="h4 mb-1">{{ user.first_name }} {{ user.last_name }}</h1>
+    <p class="text-secondary mb-0">Szczegóły użytkownika</p>
+  </div>
+
+  <div class="d-flex gap-2">
+    {% if user.status != 'Anonymized' %}
+      <a
+        href="{{ url_for('user_edit', user_id=user.id) }}"
+        class="btn btn-primary"
+      >
+        <i class="bi bi-pencil me-1"></i> Edytuj
+      </a>
+    {% endif %}
+
+    <a href="{{ url_for('user_list') }}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i> Wróć do listy
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <dl class="row mb-0">
+      <dt class="col-sm-3 text-secondary">ID</dt>
+      <dd class="col-sm-9">{{ user.id }}</dd>
+
+      <dt class="col-sm-3 text-secondary">Imię</dt>
+      <dd class="col-sm-9">{{ user.first_name }}</dd>
+
+      <dt class="col-sm-3 text-secondary">Nazwisko</dt>
+      <dd class="col-sm-9">{{ user.last_name }}</dd>
+
+      <dt class="col-sm-3 text-secondary">E-mail</dt>
+      <dd class="col-sm-9">{{ user.email }}</dd>
+
+      <dt class="col-sm-3 text-secondary">Telefon</dt>
+      <dd class="col-sm-9">{{ user.phone or '—' }}</dd>
+
+      <dt class="col-sm-3 text-secondary">Uprawnienia</dt>
+      <dd class="col-sm-9">
+        {{ 'Administrator' if user.is_admin else 'Użytkownik' }}
+      </dd>
+
+      <dt class="col-sm-3 text-secondary">Status</dt>
+      <dd class="col-sm-9">
+        {{ status_labels.get(user.status, user.status) }}
+      </dd>
+
+      {% if user.status == 'Blocked' %}
+        <dt class="col-sm-3 text-secondary">Powód blokady</dt>
+        <dd class="col-sm-9">{{ user.blocked_reason }}</dd>
+
+        <dt class="col-sm-3 text-secondary">Data blokady</dt>
+        <dd class="col-sm-9">{{ user.blocked_at or '—' }}</dd>
+
+        <dt class="col-sm-3 text-secondary">ID blokującego</dt>
+        <dd class="col-sm-9">
+          {{ user.blocked_by if user.blocked_by is not none else '—' }}
+        </dd>
+      {% endif %}
+
+      {% if user.anonymized_at %}
+        <dt class="col-sm-3 text-secondary">Data anonimizacji</dt>
+        <dd class="col-sm-9">{{ user.anonymized_at }}</dd>
+      {% endif %}
+
+      <dt class="col-sm-3 text-secondary">Data utworzenia (UTC)</dt>
+      <dd class="col-sm-9">{{ user.created_at }}</dd>
+
+      <dt class="col-sm-3 text-secondary">Ostatnia zmiana (UTC)</dt>
+      <dd class="col-sm-9">{{ user.updated_at }}</dd>
+    </dl>
+  </div>
+</div>
 {% endblock %}

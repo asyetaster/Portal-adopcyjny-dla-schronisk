@@ -1,0 +1,91 @@
+{% set editing = user is defined %}
+
+<div class="row">
+  <div class="col-md-6 mb-3">
+    <label for="first_name" class="form-label">Imię</label>
+    <input
+      type="text"
+      id="first_name"
+      name="first_name"
+      class="form-control"
+      value="{{ user.first_name if editing else '' }}"
+      maxlength="100"
+      autocomplete="given-name"
+      required
+    >
+  </div>
+
+  <div class="col-md-6 mb-3">
+    <label for="last_name" class="form-label">Nazwisko</label>
+    <input
+      type="text"
+      id="last_name"
+      name="last_name"
+      class="form-control"
+      value="{{ user.last_name if editing else '' }}"
+      maxlength="100"
+      autocomplete="family-name"
+      required
+    >
+  </div>
+</div>
+
+<div class="mb-3">
+  <label for="email" class="form-label">E-mail</label>
+  <input
+    type="email"
+    id="email"
+    name="email"
+    class="form-control"
+    value="{{ user.email if editing else '' }}"
+    maxlength="254"
+    autocomplete="email"
+    required
+  >
+</div>
+
+<div class="mb-3">
+  <label for="phone" class="form-label">Telefon</label>
+  <input
+    type="tel"
+    id="phone"
+    name="phone"
+    class="form-control"
+    value="{{ (user.phone or '') if editing else '' }}"
+    autocomplete="tel"
+  >
+  <div class="form-text">Pole opcjonalne.</div>
+</div>
+
+<div class="mb-3">
+  <label for="password" class="form-label">
+    {{ 'Nowe hasło' if editing else 'Hasło' }}
+  </label>
+  <input
+    type="password"
+    id="password"
+    name="password"
+    class="form-control"
+    autocomplete="new-password"
+    {% if not editing %}required{% endif %}
+  >
+  {% if editing %}
+    <div class="form-text">
+      Pozostaw puste, aby nie zmieniać hasła.
+    </div>
+  {% endif %}
+</div>
+
+<div class="form-check mb-4">
+  <input
+    type="checkbox"
+    id="is_admin"
+    name="is_admin"
+    value="1"
+    class="form-check-input"
+    {% if editing and user.is_admin %}checked{% endif %}
+  >
+  <label for="is_admin" class="form-check-label">
+    Administrator portalu
+  </label>
+</div>
