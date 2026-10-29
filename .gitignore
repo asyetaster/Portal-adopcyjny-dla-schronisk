@@ -3,4 +3,3 @@
 __pycache__/
 app.db
 /tmp.txt
-/crud-context-generator.sh
