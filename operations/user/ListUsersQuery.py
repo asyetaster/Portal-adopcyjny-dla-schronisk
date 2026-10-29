@@ -18,14 +18,22 @@ class ListUsersQuery:
 
         rows = self.connection.execute(
             text("""
-                SELECT id, name
+                SELECT
+                    id,
+                    email,
+                    first_name,
+                    last_name,
+                    phone,
+                    is_admin,
+                    status,
+                    created_at,
+                    updated_at
                 FROM users
-                ORDER BY id
+                ORDER BY created_at DESC, id DESC
                 LIMIT :limit OFFSET :offset
             """),
             {"limit": limit, "offset": offset},
         ).mappings().all()
-
 
         total_pages = (total + limit - 1) // limit
 

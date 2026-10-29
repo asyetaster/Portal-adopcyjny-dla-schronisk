@@ -1,34 +1,35 @@
 {% extends "admin/base.html" %}
+
 {% block title %}Dodaj użytkownika{% endblock %}
+
 {% block content %}
-      <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-        <div>
-          <h1 class="h4 mb-1">Dodaj użytkownika</h1>
-          <p class="text-secondary mb-0">Utwórz nowe konto użytkownika</p>
-        </div>
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h1 class="h4 mb-1">Dodaj użytkownika</h1>
+    <p class="text-secondary mb-0">Utwórz nowe konto użytkownika</p>
+  </div>
+
+  <a href="{{ url_for('user_list') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Wróć do listy
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form method="post" action="{{ url_for('add_user') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      {% include "admin/users/_form_fields.html" %}
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i> Zapisz
+        </button>
         <a href="{{ url_for('user_list') }}" class="btn btn-outline-secondary">
-          <i class="bi bi-arrow-left me-1"></i> Wróć do listy
+          Anuluj
         </a>
       </div>
-
-      <div class="card">
-        <div class="card-body">
-          <form method="post" action="{{ url_for('add_user') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-            <div class="mb-3">
-              <label for="name" class="form-label">Nazwa</label>
-              <input type="text" id="name" name="name" class="form-control"
-                     maxlength="100" required placeholder="np. Jan Kowalski">
-            </div>
-
-            <div class="d-flex gap-2">
-              <button type="submit" class="btn btn-primary">
-                <i class="bi bi-check-lg me-1"></i> Zapisz
-              </button>
-              <a href="{{ url_for('user_list') }}" class="btn btn-outline-secondary">Anuluj</a>
-            </div>
-          </form>
-        </div>
-      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}
