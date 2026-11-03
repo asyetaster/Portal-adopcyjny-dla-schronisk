@@ -8,7 +8,8 @@ import argparse
 import inspect
 import json
 import sys
-from typing import Any, get_type_hints
+import types
+from typing import Any, Union, get_args, get_origin, get_type_hints
 
 from sqlalchemy import Engine
 
@@ -48,6 +49,17 @@ def option_name(param_name: str) -> str:
     return "--" + param_name.replace("_", "-")
 
 
+def _unwrap_optional(annotation: Any) -> tuple[Any, bool]:
+    """Rozpakowuje Optional[X] / X | None → zwraca (X, True); wpp (annotation, False)."""
+    origin = get_origin(annotation)
+    if origin in (Union, types.UnionType):
+        args = get_args(annotation)
+        non_none = [a for a in args if a is not type(None)]
+        if len(non_none) == 1 and len(args) == 2:
+            return non_none[0], True
+    return annotation, False
+
+
 def execute_parameters(cls: type) -> list[tuple[inspect.Parameter, type]]:
     """Zwraca parametry execute() (bez self) z typami; zgłasza czytelne błędy."""
     signature = inspect.signature(cls.execute)
@@ -69,11 +81,12 @@ def execute_parameters(cls: type) -> list[tuple[inspect.Parameter, type]]:
             raise OperationError(f"{where}: parametry positional-only nie są obsługiwane")
         if param.name not in hints:
             raise OperationError(f"{where}: brak adnotacji typu")
-        annotation = hints[param.name]
+        raw_annotation = hints[param.name]
+        annotation, _ = _unwrap_optional(raw_annotation)
         if annotation not in SUPPORTED_TYPES:
             supported = ", ".join(t.__name__ for t in SUPPORTED_TYPES)
             raise OperationError(
-                f"{where}: nieobsługiwany typ {annotation!r} (obsługiwane: {supported})"
+                f"{where}: nieobsługiwany typ {raw_annotation!r} (obsługiwane: {supported})"
             )
         params.append((param, annotation))
     return params
