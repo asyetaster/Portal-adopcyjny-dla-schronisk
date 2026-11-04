@@ -3,3 +3,6 @@
 Flask>=3.0
 Flask-WTF>=1.2
 SQLAlchemy>=2.0
+
+# dev — testowanie
+pytest>=8.0
