@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Portal adopcyjny{% endblock %}
+
+{% block content %}
+<h1>Portal adopcyjny dla schronisk</h1>
+{% if g.user %}
+  <p>Witaj, {{ g.user['first_name'] }}!</p>
+{% else %}
+  <p>
+    <a href="{{ url_for('login') }}">Zaloguj się</a> albo
+    <a href="{{ url_for('register_form') }}">załóż konto</a>.
+  </p>
+{% endif %}
+{% endblock %}

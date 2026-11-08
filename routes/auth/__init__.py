@@ -39,14 +39,14 @@ def register(app: Flask) -> None:
         flash(f"Witaj, {user['first_name']}!")
 
         next_url = request.form.get("next", "")
-        target = next_url if is_safe_redirect_url(next_url) else url_for("user_list")
+        target = next_url if is_safe_redirect_url(next_url) else url_for("home")
         return redirect(target, code=303)
 
     @app.post("/logout")
     def logout():
         session.clear()
         flash("Wylogowano.")
-        return redirect(url_for("login"))
+        return redirect(url_for("home"), code=303)
 
     @app.errorhandler(403)
     def forbidden(e):

@@ -6,6 +6,7 @@ import sqlite3
 from flask import abort, request
 from sqlalchemy.exc import IntegrityError
 
+from operations.errors import BusinessRuleError
 from operations.user import MAX_EMAIL_LENGTH, MAX_NAME_LENGTH
 
 
@@ -51,7 +52,7 @@ def read_user_form(*, creating: bool) -> dict:
     if not EMAIL_PATTERN.fullmatch(email):
         abort(400, description="Podaj poprawny adres e-mail")
 
-    phone = request.form.get("phone", "").strip() or None
+    phone = request.form.get("phone", "").strip()
 
     # Nie usuwamy spacji z hasła.
     password = request.form.get("password", "")
@@ -65,8 +66,34 @@ def read_user_form(*, creating: bool) -> dict:
         "last_name": last_name,
         "phone": phone,
         "is_admin": request.form.get("is_admin") == "1",
-        "password": password if password else None,
+        "password": password,
     }
+
+
+def read_profile_form() -> dict:
+    """Pola z formularza „Mój profil” (bez e-maila i hasła)."""
+    return {
+        "first_name": read_required_text("first_name", "Imię", MAX_NAME_LENGTH),
+        "last_name": read_required_text("last_name", "Nazwisko", MAX_NAME_LENGTH),
+        "phone": request.form.get("phone", "").strip(),
+    }
+
+
+def read_register_form() -> dict:
+    """Pola z formularza rejestracji. Telefon opcjonalny (BR-050)."""
+    data = read_profile_form()
+
+    email = read_required_text("email", "E-mail", MAX_EMAIL_LENGTH)
+    if not EMAIL_PATTERN.fullmatch(email):
+        abort(400, description="Podaj poprawny adres e-mail")
+
+    # Nie usuwamy spacji z hasła.
+    # Długość hasła sprawdza RegisterUserCommand.
+    password = request.form.get("password", "")
+    if password != request.form.get("password_confirm", ""):
+        raise BusinessRuleError("Hasła nie są takie same.")
+
+    return {**data, "email": email, "password": password}
 
 
 def handle_user_integrity_error(error: IntegrityError) -> None:

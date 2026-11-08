@@ -79,4 +79,30 @@
     </dl>
   </div>
 </div>
+
+{% if user.status == 'Active' and user.id != g.user['id'] %}
+<div class="card mt-4 border-danger">
+  <div class="card-body">
+    <h2 class="h6 mb-3">Zablokuj konto</h2>
+    <form method="post" action="{{ url_for('user_block', user_id=user.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-3">
+        <label for="reason" class="form-label">Powód blokady</label>
+        <textarea id="reason" name="reason" class="form-control" rows="2" required></textarea>
+        <div class="form-text">Zablokowany użytkownik zostanie wylogowany i nie zaloguje się ponownie.</div>
+      </div>
+      <button type="submit" class="btn btn-danger">
+        <i class="bi bi-slash-circle me-1"></i> Zablokuj
+      </button>
+    </form>
+  </div>
+</div>
+{% elif user.status == 'Blocked' %}
+<form method="post" action="{{ url_for('user_unblock', user_id=user.id) }}" class="mt-4">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button type="submit" class="btn btn-success">
+    <i class="bi bi-unlock me-1"></i> Odblokuj konto
+  </button>
+</form>
+{% endif %}
 {% endblock %}

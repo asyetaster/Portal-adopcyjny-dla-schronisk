@@ -14,21 +14,21 @@ class UpdateUserCommand:
         email: str,
         first_name: str,
         last_name: str,
-        phone: str | None = None,
+        phone: str = "",
         is_admin: bool = False,
-        password: str | None = None,
+        password: str = "",
     ) -> int:
         params = {
             "id": user_id,
             "email": email,
             "first_name": first_name,
             "last_name": last_name,
-            "phone": phone,
+            "phone": phone or None,
             "is_admin": int(is_admin),
         }
 
         password_assignment = ""
-        if password is not None:
+        if password:
             params["password_hash"] = generate_password_hash(password)
             password_assignment = ", password_hash = :password_hash"
 

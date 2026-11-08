@@ -162,8 +162,8 @@ def test_logout_clears_session(app, client):
     })
 
     response = client.post("/logout")
-    assert response.status_code == 302
-    assert "/login" in response.headers["Location"]
+    assert response.status_code == 303
+    assert response.headers["Location"].endswith("/")
 
     with client.session_transaction() as sess:
         assert "user_id" not in sess
@@ -187,7 +187,7 @@ def test_open_redirect_blocked(app, client):
     })
     assert response.status_code == 303
     assert "evil.com" not in response.headers["Location"]
-    assert response.headers["Location"].endswith("/admin/users")
+    assert response.headers["Location"].endswith("/")
 
 
 # ---------------------------------------------------------------------------
@@ -228,8 +228,8 @@ def test_integration_admin_and_non_admin_flow(app, client):
 
     # 3. Wylogowanie
     response = client.post("/logout")
-    assert response.status_code == 302
-    assert "/login" in response.headers["Location"]
+    assert response.status_code == 303
+    assert response.headers["Location"].endswith("/")
 
     # 4. Logowanie jako zwykły użytkownik → 403 na /admin/users
     response = client.post("/login", data={

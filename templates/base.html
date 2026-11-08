@@ -3,15 +3,36 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Użytkownicy{% endblock %}</title>
+  <title>{% block title %}Portal adopcyjny{% endblock %}</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
+    nav { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-bottom: 1rem; }
+    nav form { margin: 0; }
     .message { background: #e6f4ea; border: 1px solid #9ccfa8; padding: .5rem .75rem; }
     label, input, button { font-size: 1rem; }
+    .field { margin-bottom: .75rem; }
+    .field label { display: block; margin-bottom: .25rem; }
+    .field input { width: 100%; box-sizing: border-box; padding: .4rem; }
+    .hint { color: #666; font-size: .875rem; }
   </style>
 </head>
 <body>
-  <nav><a href="{{ url_for('user_list') }}">Lista użytkowników</a></nav>
+  <nav>
+    <a href="{{ url_for('home') }}">Strona główna</a>
+    {% if g.user %}
+      <a href="{{ url_for('account_profile') }}">Mój profil</a>
+      {% if g.user['is_admin'] %}
+        <a href="{{ url_for('user_list') }}">Administracja</a>
+      {% endif %}
+      <form method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit">Wyloguj</button>
+      </form>
+    {% else %}
+      <a href="{{ url_for('login') }}">Zaloguj</a>
+      <a href="{{ url_for('register_form') }}">Załóż konto</a>
+    {% endif %}
+  </nav>
   {% for flashed in get_flashed_messages() %}
     <p class="message">{{ flashed }}</p>
   {% endfor %}

@@ -19,10 +19,10 @@
           <h1 class="h4 mb-1 text-center">
             <i class="bi bi-box-seam me-2"></i> Portal adopcyjny
           </h1>
-          <p class="text-secondary text-center mb-4">Panel administracyjny — logowanie</p>
+          <p class="text-secondary text-center mb-4">Logowanie</p>
 
           {% for flashed in get_flashed_messages() %}
-            <div class="alert alert-danger py-2" role="alert">{{ flashed }}</div>
+            <div class="alert alert-info py-2" role="alert">{{ flashed }}</div>
           {% endfor %}
 
           <form method="post" action="{{ url_for('login_submit') }}">
@@ -60,6 +60,10 @@
               </button>
             </div>
           </form>
+
+          <p class="text-center mt-3 mb-0 small">
+            Nie masz konta? <a href="{{ url_for('register_form') }}">Załóż konto</a>
+          </p>
         </div>
       </div>
     </div>
