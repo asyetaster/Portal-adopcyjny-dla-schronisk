@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Mój profil{% endblock %}
+
+{% block content %}
+<h1>Mój profil</h1>
+
+<p>
+  E-mail: <strong>{{ profile.email }}</strong><br>
+  <span class="hint">Konto założone: {{ profile.created_at }} (UTC). Adresu e-mail nie można zmienić.</span>
+</p>
+
+<form method="post" action="{{ url_for('account_profile_update') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="field">
+    <label for="first_name">Imię</label>
+    <input type="text" id="first_name" name="first_name" value="{{ profile.first_name }}"
+           maxlength="100" autocomplete="given-name" required>
+  </div>
+
+  <div class="field">
+    <label for="last_name">Nazwisko</label>
+    <input type="text" id="last_name" name="last_name" value="{{ profile.last_name }}"
+           maxlength="100" autocomplete="family-name" required>
+  </div>
+
+  <div class="field">
+    <label for="phone">Telefon</label>
+    <input type="tel" id="phone" name="phone" value="{{ profile.phone or '' }}" autocomplete="tel">
+    <span class="hint">Pole opcjonalne.</span>
+  </div>
+
+  <button type="submit">Zapisz</button>
+</form>
+{% endblock %}

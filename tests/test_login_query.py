@@ -1,4 +1,7 @@
+import pytest
 from sqlalchemy import text
+
+from operations.errors import BusinessRuleError
 
 from operations.user.CreateUserCommand import CreateUserCommand
 from operations.user.LoginUserQuery import LoginUserQuery
@@ -74,9 +77,14 @@ def test_login_blocked_user(app):
         trans.commit()
 
     with engine.connect() as conn:
-        result = LoginUserQuery(conn).execute(email="blocked@example.com", password="demo1234")
+        # Poprawne hasło → osobny komunikat o blokadzie.
+        with pytest.raises(BusinessRuleError, match="zablokowane"):
+            LoginUserQuery(conn).execute(email="blocked@example.com", password="demo1234")
 
-    assert result is None
+        # Złe hasło → jak przy każdym błędnym logowaniu, bez ujawniania blokady.
+        assert LoginUserQuery(conn).execute(
+            email="blocked@example.com", password="wrong"
+        ) is None
 
 
 def test_login_nonexistent_user(app):

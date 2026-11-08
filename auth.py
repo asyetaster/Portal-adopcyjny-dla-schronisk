@@ -4,6 +4,8 @@ Funkcje ``load_logged_in_user()`` i ``require_admin_access()`` są rejestrowane
 jako ``before_request`` w ``routes/auth/__init__.py`` (Task 4).
 """
 
+import functools
+
 from flask import abort, current_app, g, redirect, request, session, url_for
 
 from operations.user.GetCurrentUserQuery import GetCurrentUserQuery
@@ -57,3 +59,33 @@ def require_admin_access():
 def is_safe_redirect_url(target: str) -> bool:
     """True tylko dla względnych ścieżek (zapobiega atakom open redirect)."""
     return bool(target) and target.startswith("/") and not target.startswith("//")
+
+
+def login_required(view):
+    """Dekorator widoku: bez zalogowania → ``/login?next=...``.
+
+    Stoi między ``@app.get/post`` a ``@page``, więc odmowa następuje przed
+    otwarciem transakcji.
+    """
+
+    @functools.wraps(view)
+    def wrapper(*args, **kwargs):
+        if g.user is None:
+            return redirect(url_for("login", next=request.path))
+        return view(*args, **kwargs)
+
+    return wrapper
+
+
+def admin_required(view):
+    """Dekorator widoku: bez zalogowania → ``/login``, bez ``is_admin`` → 403."""
+
+    @functools.wraps(view)
+    def wrapper(*args, **kwargs):
+        if g.user is None:
+            return redirect(url_for("login", next=request.path))
+        if not g.user["is_admin"]:
+            abort(403)
+        return view(*args, **kwargs)
+
+    return wrapper

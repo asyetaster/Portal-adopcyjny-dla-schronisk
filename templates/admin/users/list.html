@@ -21,6 +21,31 @@
   'Anonymized': 'text-bg-secondary'
 } %}
 
+<form method="get" action="{{ url_for('user_list') }}" class="row g-2 mb-3">
+  <div class="col-md-6">
+    <input type="search" name="search" value="{{ search }}" class="form-control"
+           placeholder="Szukaj po e-mailu, imieniu lub nazwisku" aria-label="Szukaj">
+  </div>
+  <div class="col-md-3">
+    <select name="status" class="form-select" aria-label="Status">
+      <option value="">Wszystkie statusy</option>
+      {% for value, label in status_labels.items() %}
+        <option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3 d-flex gap-2">
+    <button type="submit" class="btn btn-outline-primary flex-grow-1">
+      <i class="bi bi-search me-1"></i> Filtruj
+    </button>
+    {% if search or status %}
+      <a href="{{ url_for('user_list') }}" class="btn btn-outline-secondary" title="Wyczyść filtry">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    {% endif %}
+  </div>
+</form>
+
 <div class="card">
   <div class="card-body">
     <div class="table-responsive">
@@ -106,7 +131,7 @@
       </table>
     </div>
 
-    {{ pagination_nav(pagination, "user_list") }}
+    {{ pagination_nav(pagination, "user_list", search=search or None, status=status or None) }}
   </div>
 </div>
 {% endblock %}

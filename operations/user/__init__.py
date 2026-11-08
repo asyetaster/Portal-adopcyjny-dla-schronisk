@@ -6,3 +6,4 @@ USER_STATUS_LABELS = {
     "Blocked": "Zablokowany",
     "Anonymized": "Zanonimizowany",
 }
+MIN_PASSWORD_LENGTH = 8

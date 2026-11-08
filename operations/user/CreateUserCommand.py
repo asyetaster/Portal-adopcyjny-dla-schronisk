@@ -14,7 +14,7 @@ class CreateUserCommand:
         password: str,
         first_name: str,
         last_name: str,
-        phone: str | None = None,
+        phone: str = "",
         is_admin: bool = False,
     ) -> int:
         result = self.connection.execute(
@@ -41,7 +41,7 @@ class CreateUserCommand:
                 "password_hash": generate_password_hash(password),
                 "first_name": first_name,
                 "last_name": last_name,
-                "phone": phone,
+                "phone": phone or None,
                 "is_admin": int(is_admin),
             },
         )
