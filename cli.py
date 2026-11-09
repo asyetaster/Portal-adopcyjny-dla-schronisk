@@ -138,6 +138,7 @@ def build_parser(operations: dict[str, type]) -> argparse.ArgumentParser:
 def run_operation(engine: Engine, cls: type, kwargs: dict[str, Any], *, dry_run: bool = False) -> Any:
     """Jedna Connection + jedna transakcja. Command: commit, Query / dry-run: rollback."""
     with engine.connect() as connection:  # zawsze zamyka połączenie
+        connection.info["begin_immediate"] = is_command(cls) and not dry_run
         transaction = connection.begin()
         try:
             result = cls(connection).execute(**kwargs)

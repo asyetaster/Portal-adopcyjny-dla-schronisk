@@ -46,6 +46,7 @@ def page(template: str, *, write: bool = False) -> Callable:
 
             engine = current_app.extensions["db_engine"]
             with engine.connect() as connection:  # zawsze zamyka połączenie
+                connection.info["begin_immediate"] = write
                 transaction = connection.begin()
                 try:
                     for name, cls in dependencies.items():

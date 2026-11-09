@@ -5,7 +5,7 @@ Funkcje ``load_logged_in_user()`` i ``require_admin_access()`` pochodzą z
 sprawdzaniem uprawnień), aby odmowa nastąpiła zanim ``@page`` otworzy transakcję.
 """
 
-from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask import Flask, flash, redirect, request, session, url_for
 
 from auth import is_safe_redirect_url, load_logged_in_user, require_admin_access
 from operations.user.LoginUserQuery import LoginUserQuery
@@ -48,6 +48,3 @@ def register(app: Flask) -> None:
         flash("Wylogowano.")
         return redirect(url_for("home"), code=303)
 
-    @app.errorhandler(403)
-    def forbidden(e):
-        return render_template("errors/403.html"), 403

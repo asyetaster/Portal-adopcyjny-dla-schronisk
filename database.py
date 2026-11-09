@@ -29,10 +29,17 @@ def _fix_sqlite_transactions(engine: Engine) -> None:
     @event.listens_for(engine, "connect")
     def _on_connect(dbapi_connection, connection_record):
         dbapi_connection.isolation_level = None
+        # SQLite domyślnie ignoruje klucze obce; włączamy je dla każdego połączenia.
+        dbapi_connection.execute("PRAGMA foreign_keys = ON")
 
     @event.listens_for(engine, "begin")
     def _on_begin(connection):
-        connection.exec_driver_sql("BEGIN")
+        # Command otwiera transakcję jako BEGIN IMMEDIATE (blokada zapisu od razu),
+        # żeby dwa równoległe commandy nie czytały tego samego stanu (np. M7).
+        # pop(): connection.info żyje razem z połączeniem w puli, więc flaga
+        # musi działać tylko na jedną transakcję.
+        immediate = connection.info.pop("begin_immediate", False)
+        connection.exec_driver_sql("BEGIN IMMEDIATE" if immediate else "BEGIN")
 
 
 def init_db(engine: Engine) -> None:
