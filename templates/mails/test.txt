@@ -1,0 +1,3 @@
+Cześć {{ name }},
+
+To jest wiadomość testowa z portalu adopcyjnego.

@@ -40,7 +40,7 @@ class ListUsersQuery:
         return paginate(
             self.connection,
             count_sql=f"SELECT COUNT(*) FROM users {where}",
-            rows_sql=f"""
+            items_sql=f"""
                 SELECT
                     id,
                     email,
@@ -54,7 +54,6 @@ class ListUsersQuery:
                 FROM users
                 {where}
                 ORDER BY created_at DESC, id DESC
-                LIMIT :limit OFFSET :offset
             """,
             params=params,
             page=page,

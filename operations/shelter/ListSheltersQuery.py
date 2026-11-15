@@ -33,13 +33,12 @@ class ListSheltersQuery:
         return paginate(
             self.connection,
             count_sql=f"SELECT COUNT(*) FROM shelters {where}",
-            rows_sql=f"""
+            items_sql=f"""
                 SELECT id, name, city, voivodeship, contact_email, status,
                        submitted_at, decided_at
                 FROM shelters
                 {where}
                 ORDER BY submitted_at DESC, id DESC
-                LIMIT :limit OFFSET :offset
             """,
             params=params,
             page=page,

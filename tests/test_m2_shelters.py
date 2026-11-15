@@ -338,5 +338,5 @@ def test_admin_pages_render(client, world):
 def test_seed_demo_data_is_idempotent(app):
     first = _run(app, SeedDemoDataCommand)
     second = _run(app, SeedDemoDataCommand)
-    assert first["shelters"] == 20 and second["shelters"] == 0
+    assert first["shelters"] == 35 and second["shelters"] == 0
     assert len(_run(app, SearchSheltersQuery)["items"]) == 2

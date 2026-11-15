@@ -13,7 +13,7 @@ class ListPendingShelterRegistrationsQuery:
         return paginate(
             self.connection,
             count_sql="SELECT COUNT(*) FROM shelters WHERE status = 'Pending'",
-            rows_sql="""
+            items_sql="""
                 SELECT
                     s.id,
                     s.name,
@@ -28,7 +28,6 @@ class ListPendingShelterRegistrationsQuery:
                 JOIN users u ON u.id = s.submitted_by
                 WHERE s.status = 'Pending'
                 ORDER BY s.submitted_at ASC, s.id ASC
-                LIMIT :limit OFFSET :offset
             """,
             params={},
             page=page,

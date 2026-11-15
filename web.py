@@ -1,10 +1,11 @@
 import functools
 from typing import Any, Callable, get_type_hints
 
-from flask import current_app, g, render_template
+from flask import current_app, render_template
 from werkzeug.wrappers import Response
 
 from discovery import is_command, is_operation_class
+from mailer import discard_queued_mails
 
 
 def page(template: str, *, write: bool = False) -> Callable:
@@ -46,6 +47,7 @@ def page(template: str, *, write: bool = False) -> Callable:
 
             engine = current_app.extensions["db_engine"]
             with engine.connect() as connection:  # zawsze zamyka połączenie
+                connection.info["begin_immediate"] = write
                 transaction = connection.begin()
                 try:
                     for name, cls in dependencies.items():
@@ -70,7 +72,7 @@ def page(template: str, *, write: bool = False) -> Callable:
                     if transaction.is_active:
                         transaction.rollback()
                     # Maile z wycofanej transakcji nie mogą wyjść (mailer.py).
-                    g.pop("_mails", None)
+                    discard_queued_mails()
                     raise
             return response
 

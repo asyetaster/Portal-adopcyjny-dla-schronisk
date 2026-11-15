@@ -82,7 +82,7 @@ Obowiązują w każdym milestonie. Ustala je M0.
 5. **POST zawsze kończy się przekierowaniem** (Post/Redirect/Get, kod 303) z `flash()`, jak w `routes/user/create.py`.
 6. **Walidacja formularzy** w helperach `routes/<obszar>/<moduł>/__init__.py` (wzór: `read_user_name`), a przy złych danych `abort(400)`.
 7. **Obsługa błędów:** `routes/errors.py` (`register(app)` z `app.register_error_handler`): `BusinessRuleError` → `flash(komunikat)` + przekierowanie na `request.referrer`; `NotFoundError` → 404. Widoki nie łapią tych wyjątków same.
-8. **E-maile:** `mailer.py` z funkcją `queue_mail(to, subject, template, **ctx)`. W kontekście requestu zapisuje maila w `g`, a `after_request` (w `routes/mail.py`) wysyła go tylko przy odpowiedzi < 400, czyli po commicie. Poza requestem (`test.py`) wysyła od razu. W trybie deweloperskim zamiast SMTP dopisuje do `instance/mails.log`.
+8. **E-maile:** `mailer.py` z funkcją `queue_mail(to, subject, template, **ctx)`. W kontekście requestu zapisuje maila w `g`, a `after_request` (w `routes/mail.py`) wysyła go tylko przy odpowiedzi < 400, czyli po commicie. Poza requestem (`test.py`) wysyła od razu. Wysyłka przez SMTP, gdy ustawiono `MAIL_SERVER`; bez niego mail jest zapisywany jako plik `.eml` w `instance/mails/` (podgląd w `/admin/mails`).
 
 ### Szablony (`templates/`)
 
@@ -127,7 +127,7 @@ Obowiązują w każdym milestonie. Ustala je M0.
 | `operations/errors.py`, `operations/pagination.py`, `operations/common.py` | Nowe (zasady wspólne pkt 5–7). `common.py` na razie tylko z `now_utc()`. |
 | `auth.py` | Szkielet dekoratorów (bez `before_request`, który powstaje w M1). |
 | `labels.py`, `routes/filters.py` | Filtr `|label`. |
-| `mailer.py`, `routes/mail.py` | Kolejka e-maili + zapis do `instance/mails.log`. |
+| `mailer.py`, `routes/mail.py` | Kolejka e-maili, SMTP albo zapis `.eml` do `instance/mails/`. |
 | `routes/errors.py` | Obsługa `BusinessRuleError` i `NotFoundError`, strony 403 / 404. |
 | `templates/public/base.html`, `templates/panel/base.html`, `templates/errors/{403,404}.html` | Najprostsze wersje (sam szkielet HTML z `{% block content %}`), żeby M1 miał z czego dziedziczyć. Docelowy wygląd powstaje w M0.5. |
 | `routes/public/home/show.py` + `templates/public/home.html` | `GET /`: pusta strona główna. |

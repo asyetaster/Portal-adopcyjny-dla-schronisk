@@ -1,19 +1,27 @@
-"""Kolejka e-maili. Maile nie są wysyłane — każdy zapisujemy jako plik ``.eml``.
+"""Kolejka e-maili.
 
 ``queue_mail(to, subject, template, **ctx)``:
 
-- w kontekście requestu dopisuje maila do ``g._mails``; ``routes/mail.py``
-  zapisuje je w ``after_request`` tylko przy odpowiedzi < 400, a ``@page``
-  czyści kolejkę przy wycofanej transakcji,
-- poza requestem (``test.py``, testy operacji) zapisuje od razu.
+- w kontekście requestu dopisuje maila do kolejki w ``g``; ``routes/mail.py``
+  wysyła ją w ``after_request`` tylko przy odpowiedzi < 400 (czyli po commicie),
+  a przy wycofanej transakcji kolejkę czyści ``discard_queued_mails()``,
+- poza requestem (``test.py``, testy operacji) wysyła od razu.
 
-Pliki trafiają do ``instance/mails/`` (ścieżkę można nadpisać przez
-``MAIL_DIR`` w konfiguracji aplikacji). Pliki ``.eml`` otworzy każdy klient
-poczty, a administrator przegląda je w ``/admin/mails``.
+Sposób wysyłki (``send_mail``):
+
+- z ``MAIL_SERVER`` w środowisku — SMTP (opcjonalnie: ``MAIL_PORT``,
+  ``MAIL_USERNAME``, ``MAIL_PASSWORD``, ``MAIL_FROM``, ``MAIL_USE_TLS`` = 1/0),
+- bez ``MAIL_SERVER`` — zapis jako plik ``.eml`` w ``instance/mails/``
+  (ścieżkę nadpisuje ``MAIL_DIR`` z konfiguracji aplikacji albo ze środowiska).
+  Pliki ``.eml`` otworzy każdy klient poczty, a administrator przegląda je
+  w ``/admin/mails``.
+
 Treść maila to szablon Jinja z ``templates/mails/``.
 """
 
+import os
 import re
+import smtplib
 import uuid
 from datetime import datetime, timezone
 from email import policy
@@ -27,14 +35,17 @@ from jinja2 import Environment, FileSystemLoader
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_MAIL_DIR = BASE_DIR / "instance" / "mails"
-MAIL_FROM = "Portal adopcyjny <no-reply@portal-adopcyjny.local>"
+DEFAULT_MAIL_FROM = "Portal adopcyjny <no-reply@portal-adopcyjny.local>"
+QUEUE_KEY = "mail_queue"
 
 # Nazwy plików tworzy tylko save_mail(); ten wzorzec chroni przed
 # odczytem spoza katalogu (np. "../app.db") w read_mail().
 MAIL_FILE_PATTERN = re.compile(r"\d{8}T\d{6}\d{6}Z-[0-9a-f]{8}\.eml")
 
+# Własne środowisko Jinja, żeby mailer działał też bez aplikacji Flask (test.py).
 _env = Environment(
     loader=FileSystemLoader(BASE_DIR / "templates" / "mails"),
+    autoescape=False,  # wiadomości tekstowe
     keep_trailing_newline=True,
 )
 
@@ -42,30 +53,72 @@ _env = Environment(
 def mail_dir() -> Path:
     if has_app_context() and current_app.config.get("MAIL_DIR"):
         return Path(current_app.config["MAIL_DIR"])
+    if os.environ.get("MAIL_DIR"):
+        return Path(os.environ["MAIL_DIR"])
     return DEFAULT_MAIL_DIR
 
 
 def queue_mail(to: str, subject: str, template: str, **ctx) -> None:
+    for value in (to, subject):
+        if "\n" in value or "\r" in value:
+            raise ValueError("Adresat i temat nie mogą zawierać znaków nowej linii")
+
+    # Renderujemy od razu: błąd szablonu ma przerwać request (rollback).
     mail = {
         "to": to,
         "subject": subject,
         "body": _env.get_template(template).render(**ctx),
     }
     if has_request_context():
-        g.setdefault("_mails", []).append(mail)
+        g.setdefault(QUEUE_KEY, []).append(mail)
+    else:
+        send_mail(mail)
+
+
+def pop_queued_mails() -> list[dict]:
+    """Zwraca i czyści kolejkę bieżącego requestu."""
+    return g.pop(QUEUE_KEY, [])
+
+
+def discard_queued_mails() -> None:
+    """Transakcja wycofana — zakolejkowane maile przepadają."""
+    g.pop(QUEUE_KEY, None)
+
+
+def send_mail(mail: dict) -> None:
+    server = os.environ.get("MAIL_SERVER")
+    if server:
+        _send_smtp(server, mail)
     else:
         save_mail(mail)
+
+
+def _build_message(mail: dict, now: datetime) -> EmailMessage:
+    message = EmailMessage()
+    message["From"] = os.environ.get("MAIL_FROM", DEFAULT_MAIL_FROM)
+    message["To"] = mail["to"]
+    message["Subject"] = mail["subject"]
+    message["Date"] = format_datetime(now)
+    message.set_content(mail["body"])
+    return message
+
+
+def _send_smtp(server: str, mail: dict) -> None:
+    message = _build_message(mail, datetime.now(timezone.utc))
+    port = int(os.environ.get("MAIL_PORT", "587"))
+    with smtplib.SMTP(server, port, timeout=10) as smtp:
+        if os.environ.get("MAIL_USE_TLS", "1") == "1":
+            smtp.starttls()
+        username = os.environ.get("MAIL_USERNAME")
+        if username:
+            smtp.login(username, os.environ.get("MAIL_PASSWORD", ""))
+        smtp.send_message(message)
 
 
 def save_mail(mail: dict) -> Path:
     """Zapisuje maila jako ``<czas UTC>-<losowy sufiks>.eml``; zwraca ścieżkę."""
     now = datetime.now(timezone.utc)
-    message = EmailMessage()
-    message["From"] = MAIL_FROM
-    message["To"] = mail["to"]
-    message["Subject"] = mail["subject"]
-    message["Date"] = format_datetime(now)
-    message.set_content(mail["body"])
+    message = _build_message(mail, now)
 
     directory = mail_dir()
     directory.mkdir(parents=True, exist_ok=True)
@@ -73,12 +126,6 @@ def save_mail(mail: dict) -> Path:
     path = directory / name
     path.write_bytes(message.as_bytes(policy=policy.SMTP))
     return path
-
-
-def flush_queued_mails() -> None:
-    """Zapisuje maile zebrane w ``g._mails`` i czyści kolejkę."""
-    for mail in g.pop("_mails", []):
-        save_mail(mail)
 
 
 def _parse(path: Path):
