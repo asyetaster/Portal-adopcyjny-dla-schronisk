@@ -12,10 +12,10 @@ LABELS: dict[str, dict[str, str]] = {
         "Anonymized": "Zanonimizowany",
     },
     "shelter": {
-        "Pending": "Oczekuje na akceptację",
-        "Approved": "Zatwierdzone",
-        "Rejected": "Odrzucone",
-        "Blocked": "Zablokowane",
+        "Pending": "Oczekuje na zatwierdzenie",
+        "Approved": "Zatwierdzona",
+        "Rejected": "Odrzucona",
+        "Blocked": "Zablokowana",
     },
     "animal": {
         "Draft": "Szkic",

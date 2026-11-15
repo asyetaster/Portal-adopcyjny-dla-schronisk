@@ -1,7 +1,6 @@
 from flask import Flask, abort
 
 from auth import admin_required
-from operations.shelter import SHELTER_STATUS_LABELS
 from operations.shelter.GetShelterAdminQuery import GetShelterAdminQuery
 from web import page
 
@@ -14,4 +13,4 @@ def register(app: Flask) -> None:
         shelter = get_shelter.execute(shelter_id)
         if shelter is None:
             abort(404)
-        return {"shelter": shelter, "status_labels": SHELTER_STATUS_LABELS}
+        return {"shelter": shelter}

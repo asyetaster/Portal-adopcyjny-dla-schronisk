@@ -9,7 +9,7 @@
   <article>
     <h2>{{ s.name }}</h2>
     <p>
-      Status: <strong>{{ status_labels.get(s.status, s.status) }}</strong>
+      Status: <strong>{{ s.status|label("shelter") }}</strong>
       · {{ 'kierownik' if s.is_manager else 'pracownik' }}
       · {{ s.city }}, woj. {{ s.voivodeship }}
     </p>

@@ -22,7 +22,7 @@ from operations.shelter.SubmitShelterRegistrationCommand import (
     SubmitShelterRegistrationCommand,
 )
 from operations.shelter.UnblockShelterCommand import UnblockShelterCommand
-from operations.demo.SeedDemoDataCommand import SeedDemoDataCommand
+from operations.demo.SeedDemoDataCommand import SHELTERS, SeedDemoDataCommand
 from operations.user.BlockUserCommand import BlockUserCommand
 from operations.user.CreateUserCommand import CreateUserCommand
 
@@ -338,5 +338,8 @@ def test_admin_pages_render(client, world):
 def test_seed_demo_data_is_idempotent(app):
     first = _run(app, SeedDemoDataCommand)
     second = _run(app, SeedDemoDataCommand)
-    assert first["shelters"] == 35 and second["shelters"] == 0
-    assert len(_run(app, SearchSheltersQuery)["items"]) == 2
+    assert first["shelters"] == len(SHELTERS) and second["shelters"] == 0
+    # Katalog publiczny: tylko zatwierdzone (BR-014). "items" to jedna strona,
+    # więc liczymy po "total" z paginacji.
+    approved = sum(1 for _, _, status, _ in SHELTERS if status == "Approved")
+    assert _run(app, SearchSheltersQuery)["pagination"]["total"] == approved

@@ -29,8 +29,8 @@
   <div class="col-md-3">
     <select name="status" class="form-select" aria-label="Status">
       <option value="">Wszystkie statusy</option>
-      {% for value, label in status_labels.items() %}
-        <option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ label }}</option>
+      {% for value, text in status_labels.items() %}
+        <option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ text }}</option>
       {% endfor %}
     </select>
   </div>
@@ -92,7 +92,7 @@
 
               <td>
                 <span class="badge {{ status_classes.get(user.status, 'text-bg-secondary') }}">
-                  {{ status_labels.get(user.status, user.status) }}
+                  {{ user.status|label("user") }}
                 </span>
               </td>
 

@@ -21,13 +21,6 @@ VOIVODESHIPS = (
     "zachodniopomorskie",
 )
 
-SHELTER_STATUS_LABELS = {
-    "Pending": "Oczekuje na zatwierdzenie",
-    "Approved": "Zatwierdzona",
-    "Rejected": "Odrzucona",
-    "Blocked": "Zablokowana",
-}
-
 MAX_SHELTER_NAME_LENGTH = 200
 MAX_FIELD_LENGTH = 200
 MAX_TEXT_LENGTH = 5000
