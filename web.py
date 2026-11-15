@@ -1,7 +1,7 @@
 import functools
 from typing import Any, Callable, get_type_hints
 
-from flask import current_app, render_template
+from flask import current_app, g, render_template
 from werkzeug.wrappers import Response
 
 from discovery import is_command, is_operation_class
@@ -69,6 +69,8 @@ def page(template: str, *, write: bool = False) -> Callable:
                 except BaseException:
                     if transaction.is_active:
                         transaction.rollback()
+                    # Maile z wycofanej transakcji nie mogą wyjść (mailer.py).
+                    g.pop("_mails", None)
                     raise
             return response
 

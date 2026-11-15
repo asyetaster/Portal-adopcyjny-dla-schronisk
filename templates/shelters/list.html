@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Schroniska{% endblock %}
+
+{% block content %}
+<h1>Schroniska</h1>
+
+<form method="get" action="{{ url_for('shelter_list') }}">
+  <div class="field">
+    <label for="name">Nazwa</label>
+    <input type="search" id="name" name="name" value="{{ name }}">
+  </div>
+  <div class="field">
+    <label for="voivodeship">Województwo</label>
+    <select id="voivodeship" name="voivodeship">
+      <option value="">Wszystkie</option>
+      {% for v in voivodeships %}
+        <option value="{{ v }}" {% if v == voivodeship %}selected{% endif %}>{{ v }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="city">Miejscowość</label>
+    <input type="search" id="city" name="city" value="{{ city }}">
+  </div>
+  <button type="submit">Szukaj</button>
+  {% if name or voivodeship or city %}<a href="{{ url_for('shelter_list') }}">Wyczyść</a>{% endif %}
+</form>
+
+{% for s in shelters %}
+  <article>
+    <h2><a href="{{ url_for('shelter_details', shelter_id=s.id) }}">{{ s.name }}</a></h2>
+    <p class="hint">{{ s.city }}, woj. {{ s.voivodeship }}</p>
+    {% if s.description %}<p>{{ s.description|truncate(200) }}</p>{% endif %}
+  </article>
+{% else %}
+  <p>Nie znaleziono schronisk spełniających kryteria.</p>
+{% endfor %}
+
+{% set p = pagination %}
+{% if p.total_pages > 1 %}
+<nav>
+  {% if p.has_previous %}<a href="{{ url_for('shelter_list', page=p.page - 1, name=name or None, voivodeship=voivodeship or None, city=city or None) }}">← Poprzednia</a>{% endif %}
+  Strona {{ p.page }} z {{ p.total_pages }}
+  {% if p.has_next %}<a href="{{ url_for('shelter_list', page=p.page + 1, name=name or None, voivodeship=voivodeship or None, city=city or None) }}">Następna →</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

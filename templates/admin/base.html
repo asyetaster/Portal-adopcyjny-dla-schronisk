@@ -15,35 +15,39 @@
 
   <!-- Sidebar -->
   <aside class="admin-sidebar p-3 d-none d-lg-block">
-    <a href="#" class="brand d-flex align-items-center text-decoration-none mb-4">
+    <a href="{{ url_for('user_list') }}" class="brand d-flex align-items-center text-decoration-none mb-4">
       <i class="bi bi-box-seam fs-4 me-2"></i>
       <span class="fs-5 fw-semibold">Admin</span>
     </a>
 
     <ul class="nav flex-column gap-1">
       <li class="nav-item">
-        <a class="nav-link" href="/">
+        <a class="nav-link" href="{{ url_for('home') }}">
           <i class="bi bi-house me-2"></i> Strona główna
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#">
-          <i class="bi bi-speedometer2 me-2"></i> Dashboard
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link active" href="#">
+        <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('user_') else '' }}"
+           href="{{ url_for('user_list') }}">
           <i class="bi bi-people me-2"></i> Użytkownicy
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#">
-          <i class="bi bi-bag me-2"></i> Zamówienia
+        <a class="nav-link {{ 'active' if request.endpoint in ('admin_shelter_list', 'admin_shelter_details') else '' }}"
+           href="{{ url_for('admin_shelter_list') }}">
+          <i class="bi bi-building me-2"></i> Placówki
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#">
-          <i class="bi bi-gear me-2"></i> Ustawienia
+        <a class="nav-link {{ 'active' if request.endpoint == 'admin_shelter_pending' else '' }}"
+           href="{{ url_for('admin_shelter_pending') }}">
+          <i class="bi bi-hourglass-split me-2"></i> Do zatwierdzenia
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin_mail_') else '' }}"
+           href="{{ url_for('admin_mail_list') }}">
+          <i class="bi bi-envelope me-2"></i> Maile
         </a>
       </li>
     </ul>

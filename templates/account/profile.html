@@ -7,8 +7,10 @@
 
 <p>
   E-mail: <strong>{{ profile.email }}</strong><br>
-  <span class="hint">Konto założone: {{ profile.created_at }} (UTC). Adresu e-mail nie można zmienić.</span>
+  <span class="hint">Konto założone: {{ profile.created_at }} (UTC).</span>
 </p>
+
+<h2>Dane osobowe</h2>
 
 <form method="post" action="{{ url_for('account_profile_update') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -32,5 +34,53 @@
   </div>
 
   <button type="submit">Zapisz</button>
+</form>
+
+<h2>Zmiana adresu e-mail</h2>
+
+<form method="post" action="{{ url_for('account_email_update') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="field">
+    <label for="email">Nowy adres e-mail</label>
+    <input type="email" id="email" name="email" value="{{ profile.email }}"
+           maxlength="254" autocomplete="email" required>
+  </div>
+
+  <div class="field">
+    <label for="email_current_password">Obecne hasło</label>
+    <input type="password" id="email_current_password" name="current_password"
+           autocomplete="current-password" required>
+    <span class="hint">Ze względów bezpieczeństwa potwierdź zmianę hasłem.</span>
+  </div>
+
+  <button type="submit">Zmień e-mail</button>
+</form>
+
+<h2>Zmiana hasła</h2>
+
+<form method="post" action="{{ url_for('account_password_update') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="field">
+    <label for="password_current_password">Obecne hasło</label>
+    <input type="password" id="password_current_password" name="current_password"
+           autocomplete="current-password" required>
+  </div>
+
+  <div class="field">
+    <label for="new_password">Nowe hasło</label>
+    <input type="password" id="new_password" name="new_password"
+           minlength="8" autocomplete="new-password" required>
+    <span class="hint">Co najmniej 8 znaków.</span>
+  </div>
+
+  <div class="field">
+    <label for="new_password_confirm">Powtórz nowe hasło</label>
+    <input type="password" id="new_password_confirm" name="new_password_confirm"
+           minlength="8" autocomplete="new-password" required>
+  </div>
+
+  <button type="submit">Zmień hasło</button>
 </form>
 {% endblock %}

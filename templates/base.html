@@ -12,15 +12,17 @@
     label, input, button { font-size: 1rem; }
     .field { margin-bottom: .75rem; }
     .field label { display: block; margin-bottom: .25rem; }
-    .field input { width: 100%; box-sizing: border-box; padding: .4rem; }
+    .field input, .field select, .field textarea { width: 100%; box-sizing: border-box; padding: .4rem; font: inherit; }
     .hint { color: #666; font-size: .875rem; }
   </style>
 </head>
 <body>
   <nav>
     <a href="{{ url_for('home') }}">Strona główna</a>
+    <a href="{{ url_for('shelter_list') }}">Schroniska</a>
     {% if g.user %}
       <a href="{{ url_for('account_profile') }}">Mój profil</a>
+      <a href="{{ url_for('my_shelters') }}">Moje placówki</a>
       {% if g.user['is_admin'] %}
         <a href="{{ url_for('user_list') }}">Administracja</a>
       {% endif %}

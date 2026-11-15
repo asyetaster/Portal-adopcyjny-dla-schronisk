@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ shelter.name }}{% endblock %}
+
+{% block content %}
+<p><a href="{{ url_for('shelter_list') }}">← Wszystkie schroniska</a></p>
+<h1>{{ shelter.name }}</h1>
+<p class="hint">{{ shelter.city }}, woj. {{ shelter.voivodeship }}</p>
+
+{% if shelter.description %}<p>{{ shelter.description }}</p>{% endif %}
+
+<h2>Kontakt</h2>
+<p>
+  {{ shelter.street_address }}<br>
+  {{ shelter.postal_code }} {{ shelter.city }}<br>
+  E-mail: <a href="mailto:{{ shelter.contact_email }}">{{ shelter.contact_email }}</a>
+  {% if shelter.contact_phone %}<br>Telefon: {{ shelter.contact_phone }}{% endif %}
+  {% if shelter.website %}<br><a href="{{ shelter.website }}" rel="noopener nofollow">{{ shelter.website }}</a>{% endif %}
+</p>
+
+{% if shelter.adoption_rules %}
+<h2>Zasady adopcji</h2>
+<p>{{ shelter.adoption_rules }}</p>
+{% endif %}
+{# Sekcje: zwierzęta (M3), wolontariat (M6), spacery (M7), wsparcie (M8). #}
+{% endblock %}

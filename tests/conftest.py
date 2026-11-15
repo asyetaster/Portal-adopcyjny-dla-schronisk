@@ -10,13 +10,14 @@ from database import init_db
 
 
 @pytest.fixture()
-def app():
+def app(tmp_path):
     fd, db_path = tempfile.mkstemp(suffix=".db")
     config = {
         "DATABASE_URL": f"sqlite:///{db_path}",
         "SECRET_KEY": "test-secret",
         "TESTING": True,
         "WTF_CSRF_ENABLED": False,
+        "MAIL_DIR": str(tmp_path / "mails"),
     }
     application = create_app(config)
     init_db(application.extensions["db_engine"])

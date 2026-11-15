@@ -1,0 +1,38 @@
+{% extends "panel/base.html" %}
+{% block title %}{{ shelter.name }} — pulpit{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <h1 class="h4 mb-1">{{ shelter.name }}</h1>
+  <p class="text-secondary mb-0">{{ shelter.city }}, woj. {{ shelter.voivodeship }}</p>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-secondary small">Status</div>
+      <div class="fs-5 fw-semibold">{{ status_labels.get(shelter.status, shelter.status) }}</div>
+      {% if shelter.status == 'Rejected' %}<div class="small mt-2">Powód: {{ shelter.rejection_reason }}</div>{% endif %}
+      {% if shelter.status == 'Blocked' %}<div class="small mt-2">Powód: {{ shelter.blocked_reason }}</div>{% endif %}
+    </div></div>
+  </div>
+  <div class="col-md-4">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-secondary small">Personel</div>
+      <div class="fs-5 fw-semibold">{{ shelter.employee_count }}</div>
+      <div class="small">w tym kierowników: {{ shelter.manager_count }}</div>
+    </div></div>
+  </div>
+  <div class="col-md-4">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-secondary small">Profil publiczny</div>
+      {% if shelter.status == 'Approved' %}
+        <a href="{{ url_for('shelter_details', shelter_id=shelter.id) }}">Zobacz w katalogu →</a>
+      {% else %}
+        <div class="small">Niewidoczny w katalogu.</div>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+{# Moduły: karty zwierząt (M3), zgłoszenia (M5), wolontariat (M6), spacery (M7), wpłaty (M8). #}
+{% endblock %}

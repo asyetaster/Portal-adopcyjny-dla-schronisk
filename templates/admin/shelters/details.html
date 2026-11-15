@@ -1,0 +1,89 @@
+{% extends "admin/base.html" %}
+{% from "admin/shelters/_status_badge.html" import shelter_status_classes %}
+{% block title %}{{ shelter.name }}{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h1 class="h4 mb-1">{{ shelter.name }}</h1>
+    <span class="badge {{ shelter_status_classes.get(shelter.status, 'text-bg-secondary') }}">{{ status_labels.get(shelter.status, shelter.status) }}</span>
+  </div>
+  <a href="{{ url_for('admin_shelter_list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Wróć do listy</a>
+</div>
+
+<div class="card mb-4"><div class="card-body">
+  <dl class="row mb-0">
+    <dt class="col-sm-3 text-secondary">Adres</dt>
+    <dd class="col-sm-9">{{ shelter.street_address }}, {{ shelter.postal_code }} {{ shelter.city }}, woj. {{ shelter.voivodeship }}</dd>
+    <dt class="col-sm-3 text-secondary">Kontakt</dt>
+    <dd class="col-sm-9">{{ shelter.contact_email }}{% if shelter.contact_phone %} · {{ shelter.contact_phone }}{% endif %}{% if shelter.website %} · {{ shelter.website }}{% endif %}</dd>
+    <dt class="col-sm-3 text-secondary">Opis</dt>
+    <dd class="col-sm-9">{{ shelter.description or '—' }}</dd>
+    <dt class="col-sm-3 text-secondary">Zasady adopcji</dt>
+    <dd class="col-sm-9">{{ shelter.adoption_rules or '—' }}</dd>
+    <dt class="col-sm-3 text-secondary">Zgłaszający</dt>
+    <dd class="col-sm-9">{{ shelter.submitter_first_name }} {{ shelter.submitter_last_name }} ({{ shelter.submitter_email }})</dd>
+    <dt class="col-sm-3 text-secondary">Zgłoszono (UTC)</dt>
+    <dd class="col-sm-9">{{ shelter.submitted_at }}</dd>
+    {% if shelter.decided_at %}
+      <dt class="col-sm-3 text-secondary">Decyzja (UTC)</dt>
+      <dd class="col-sm-9">{{ shelter.decided_at }}</dd>
+    {% endif %}
+    {% if shelter.rejection_reason %}
+      <dt class="col-sm-3 text-secondary">Powód odrzucenia</dt>
+      <dd class="col-sm-9">{{ shelter.rejection_reason }}</dd>
+    {% endif %}
+    {% if shelter.status == 'Blocked' %}
+      <dt class="col-sm-3 text-secondary">Powód blokady</dt>
+      <dd class="col-sm-9">{{ shelter.blocked_reason }} ({{ shelter.blocked_at }})</dd>
+    {% endif %}
+  </dl>
+</div></div>
+
+<div class="card mb-4"><div class="card-body">
+  <h2 class="h6 mb-3">Personel</h2>
+  <ul class="mb-0">
+    {% for e in shelter.employees %}
+      <li><a href="{{ url_for('user_details', user_id=e.id) }}">{{ e.first_name }} {{ e.last_name }}</a> ({{ e.email }}){% if e.is_manager %} — kierownik{% endif %}</li>
+    {% endfor %}
+  </ul>
+</div></div>
+
+{% if shelter.status == 'Pending' %}
+<div class="row g-3 mb-4">
+  <div class="col-md-6"><div class="card border-success h-100"><div class="card-body">
+    <h2 class="h6 mb-3">Zatwierdź</h2>
+    <form method="post" action="{{ url_for('admin_shelter_approve', shelter_id=shelter.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i> Zatwierdź placówkę</button>
+    </form>
+  </div></div></div>
+  <div class="col-md-6"><div class="card border-warning h-100"><div class="card-body">
+    <h2 class="h6 mb-3">Odrzuć</h2>
+    <form method="post" action="{{ url_for('admin_shelter_reject', shelter_id=shelter.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <textarea name="reason" class="form-control mb-2" rows="2" placeholder="Powód odrzucenia" required></textarea>
+      <button type="submit" class="btn btn-warning">Odrzuć</button>
+    </form>
+  </div></div></div>
+</div>
+{% endif %}
+
+{% if shelter.status == 'Blocked' %}
+<form method="post" action="{{ url_for('admin_shelter_unblock', shelter_id=shelter.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button type="submit" class="btn btn-success"><i class="bi bi-unlock me-1"></i> Odblokuj placówkę</button>
+</form>
+{% else %}
+<div class="card border-danger"><div class="card-body">
+  <h2 class="h6 mb-3">Zablokuj placówkę</h2>
+  <form method="post" action="{{ url_for('admin_shelter_block', shelter_id=shelter.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <textarea name="reason" class="form-control mb-2" rows="2" placeholder="Powód blokady" required></textarea>
+    <div class="form-text mb-2">Placówka zniknie z katalogu, a jej panel będzie tylko do odczytu.</div>
+    <button type="submit" class="btn btn-danger"><i class="bi bi-slash-circle me-1"></i> Zablokuj</button>
+  </form>
+</div></div>
+{% endif %}
+{% endblock %}

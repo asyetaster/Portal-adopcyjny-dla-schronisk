@@ -1,0 +1,38 @@
+{# Pola profilu placówki — wspólne dla zgłoszenia (account/shelters/form.html)
+   i edycji w panelu (panel/shelter/edit.html).
+   Wymaga w kontekście: `shelter` (dict, może być pusty), `voivodeships`.
+   Klasy `field` (strona klienta) i `mb-3 form-*` (Bootstrap w panelu) działają obok siebie. #}
+{% macro text_field(name, label, required=False, type="text", maxlength=200, hint="") %}
+<div class="field mb-3">
+  <label for="{{ name }}" class="form-label">{{ label }}{% if required %} *{% endif %}</label>
+  <input type="{{ type }}" id="{{ name }}" name="{{ name }}" class="form-control"
+         value="{{ shelter.get(name) or '' }}" maxlength="{{ maxlength }}" {% if required %}required{% endif %}>
+  {% if hint %}<span class="hint form-text">{{ hint }}</span>{% endif %}
+</div>
+{% endmacro %}
+{% macro textarea_field(name, label, hint="") %}
+<div class="field mb-3">
+  <label for="{{ name }}" class="form-label">{{ label }}</label>
+  <textarea id="{{ name }}" name="{{ name }}" class="form-control" rows="4" maxlength="5000">{{ shelter.get(name) or '' }}</textarea>
+  {% if hint %}<span class="hint form-text">{{ hint }}</span>{% endif %}
+</div>
+{% endmacro %}
+
+{{ text_field("name", "Nazwa placówki", required=True) }}
+{{ text_field("street_address", "Ulica i numer", required=True) }}
+{{ text_field("postal_code", "Kod pocztowy", required=True, maxlength=10) }}
+{{ text_field("city", "Miejscowość", required=True) }}
+<div class="field mb-3">
+  <label for="voivodeship" class="form-label">Województwo *</label>
+  <select id="voivodeship" name="voivodeship" class="form-select" required>
+    <option value="">— wybierz —</option>
+    {% for v in voivodeships %}
+      <option value="{{ v }}" {% if shelter.get('voivodeship') == v %}selected{% endif %}>{{ v }}</option>
+    {% endfor %}
+  </select>
+</div>
+{{ text_field("contact_email", "E-mail kontaktowy", required=True, type="email", maxlength=254) }}
+{{ text_field("contact_phone", "Telefon kontaktowy", type="tel", maxlength=30, hint="Pole opcjonalne.") }}
+{{ text_field("website", "Strona internetowa", type="url", hint="Pole opcjonalne.") }}
+{{ textarea_field("description", "Opis placówki") }}
+{{ textarea_field("adoption_rules", "Zasady adopcji", hint="Np. wizyta przedadopcyjna, umowa, opłata.") }}

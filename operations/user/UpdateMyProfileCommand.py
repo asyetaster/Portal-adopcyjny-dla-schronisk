@@ -16,7 +16,7 @@ class UpdateMyProfileCommand:
         last_name: str,
         phone: str = "",
     ) -> None:
-        """Zmienia imię, nazwisko i telefon. E-maila i hasła nie zmienia."""
+        """Zmienia imię, nazwisko i telefon. E-mail i hasło: ChangeMyEmailCommand, ChangeMyPasswordCommand."""
         result = self.connection.execute(
             text("""
                 UPDATE users
