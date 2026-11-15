@@ -11,7 +11,7 @@
   <div class="col-md-4">
     <div class="card h-100"><div class="card-body">
       <div class="text-secondary small">Status</div>
-      <div class="fs-5 fw-semibold">{{ status_labels.get(shelter.status, shelter.status) }}</div>
+      <div class="fs-5 fw-semibold">{{ shelter.status|label("shelter") }}</div>
       {% if shelter.status == 'Rejected' %}<div class="small mt-2">Powód: {{ shelter.rejection_reason }}</div>{% endif %}
       {% if shelter.status == 'Blocked' %}<div class="small mt-2">Powód: {{ shelter.blocked_reason }}</div>{% endif %}
     </div></div>

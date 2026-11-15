@@ -18,8 +18,8 @@
   <div class="col-md-3">
     <select name="status" class="form-select" aria-label="Status">
       <option value="">Wszystkie statusy</option>
-      {% for value, label in status_labels.items() %}
-        <option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ label }}</option>
+      {% for value, text in status_labels.items() %}
+        <option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ text }}</option>
       {% endfor %}
     </select>
   </div>
@@ -41,7 +41,7 @@
           <td><a href="{{ url_for('admin_shelter_details', shelter_id=s.id) }}" class="fw-semibold text-decoration-none">{{ s.name }}</a></td>
           <td>{{ s.city }} <small class="text-secondary">({{ s.voivodeship }})</small></td>
           <td>{{ s.contact_email }}</td>
-          <td><span class="badge {{ shelter_status_classes.get(s.status, 'text-bg-secondary') }}">{{ status_labels.get(s.status, s.status) }}</span></td>
+          <td><span class="badge {{ shelter_status_classes.get(s.status, 'text-bg-secondary') }}">{{ s.status|label("shelter") }}</span></td>
           <td>{{ s.submitted_at }}</td>
         </tr>
         {% else %}

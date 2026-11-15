@@ -50,7 +50,7 @@
 
       <dt class="col-sm-3 text-secondary">Status</dt>
       <dd class="col-sm-9">
-        {{ status_labels.get(user.status, user.status) }}
+        {{ user.status|label("user") }}
       </dd>
 
       {% if user.status == 'Blocked' %}

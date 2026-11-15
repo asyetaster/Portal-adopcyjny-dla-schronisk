@@ -1,6 +1,5 @@
 from flask import Flask, abort
 
-from operations.user import USER_STATUS_LABELS
 from operations.user.GetUserQuery import GetUserQuery
 from web import page
 
@@ -16,5 +15,4 @@ def register(app: Flask) -> None:
 
         return {
             "user": user,
-            "status_labels": USER_STATUS_LABELS,
         }
