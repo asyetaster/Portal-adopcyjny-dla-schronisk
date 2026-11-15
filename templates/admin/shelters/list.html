@@ -1,0 +1,55 @@
+{% extends "admin/base.html" %}
+{% from "admin/shelters/_status_badge.html" import shelter_status_classes %}
+{% from "_pagination.html" import pagination as pagination_nav %}
+{% block title %}Placówki{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+  <h1 class="h4 mb-1">Placówki</h1>
+  <p class="text-secondary mb-0">Wszystkie zgłoszone placówki</p>
+</div>
+
+<form method="get" action="{{ url_for('admin_shelter_list') }}" class="row g-2 mb-3">
+  <div class="col-md-6">
+    <input type="search" name="search" value="{{ search }}" class="form-control"
+           placeholder="Szukaj po nazwie, mieście lub e-mailu" aria-label="Szukaj">
+  </div>
+  <div class="col-md-3">
+    <select name="status" class="form-select" aria-label="Status">
+      <option value="">Wszystkie statusy</option>
+      {% for value, label in status_labels.items() %}
+        <option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search me-1"></i> Filtruj</button>
+  </div>
+</form>
+
+<div class="card"><div class="card-body">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr><th>ID</th><th>Nazwa</th><th>Miejscowość</th><th>E-mail</th><th>Status</th><th>Zgłoszono (UTC)</th></tr>
+      </thead>
+      <tbody>
+        {% for s in shelters %}
+        <tr>
+          <td><small class="text-secondary">{{ s.id }}</small></td>
+          <td><a href="{{ url_for('admin_shelter_details', shelter_id=s.id) }}" class="fw-semibold text-decoration-none">{{ s.name }}</a></td>
+          <td>{{ s.city }} <small class="text-secondary">({{ s.voivodeship }})</small></td>
+          <td>{{ s.contact_email }}</td>
+          <td><span class="badge {{ shelter_status_classes.get(s.status, 'text-bg-secondary') }}">{{ status_labels.get(s.status, s.status) }}</span></td>
+          <td>{{ s.submitted_at }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center text-secondary py-4">Brak placówek.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination_nav(pagination, "admin_shelter_list", search=search or None, status=status or None) }}
+</div></div>
+{% endblock %}

@@ -5,6 +5,7 @@ from flask import current_app, render_template
 from werkzeug.wrappers import Response
 
 from discovery import is_command, is_operation_class
+from mailer import discard_queued_mails
 
 
 def page(template: str, *, write: bool = False) -> Callable:
@@ -70,6 +71,8 @@ def page(template: str, *, write: bool = False) -> Callable:
                 except BaseException:
                     if transaction.is_active:
                         transaction.rollback()
+                    # Maile z wycofanej transakcji nie mogą wyjść (mailer.py).
+                    discard_queued_mails()
                     raise
             return response
 

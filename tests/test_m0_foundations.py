@@ -1,6 +1,8 @@
 """Testy fundamentów M0: klucze obce, BEGIN IMMEDIATE, 404, etykiety, paginacja, e-maile, błędy."""
 
 import re
+from email import policy
+from email.parser import BytesParser
 
 import pytest
 from sqlalchemy import event, text
@@ -153,16 +155,28 @@ def test_paginate_rejects_bad_arguments(app, page_number, limit):
 
 @pytest.fixture()
 def mail_log(tmp_path, monkeypatch):
-    path = tmp_path / "mails.log"
-    monkeypatch.setenv("MAIL_LOG_PATH", str(path))
+    """Katalog z plikami .eml (ten sam, co MAIL_DIR aplikacji z conftest)."""
+    directory = tmp_path / "mails"
+    monkeypatch.setenv("MAIL_DIR", str(directory))
     monkeypatch.delenv("MAIL_SERVER", raising=False)
-    return path
+    return directory
+
+
+def _sent_mails(directory) -> str:
+    """Nagłówki To/Subject i treść wszystkich zapisanych maili jako jeden tekst."""
+    parts = []
+    for path in sorted(directory.glob("*.eml")):
+        with path.open("rb") as file:
+            message = BytesParser(policy=policy.default).parse(file)
+        body = message.get_body(preferencelist=("plain",)).get_content()
+        parts.append(f"To: {message['To']}\nSubject: {message['Subject']}\n\n{body}")
+    return "\n".join(parts)
 
 
 def test_queue_mail_outside_request_sends_immediately(mail_log):
-    queue_mail("ala@example.com", "Temat testowy", "mail/test.txt", name="Ala")
+    queue_mail("ala@example.com", "Temat testowy", "test.txt", name="Ala")
 
-    content = mail_log.read_text(encoding="utf-8")
+    content = _sent_mails(mail_log)
     assert "To: ala@example.com" in content
     assert "Subject: Temat testowy" in content
     assert "Cześć Ala," in content
@@ -170,7 +184,7 @@ def test_queue_mail_outside_request_sends_immediately(mail_log):
 
 def test_queue_mail_rejects_header_injection(mail_log):
     with pytest.raises(ValueError):
-        queue_mail("ala@example.com", "Temat\nBcc: ktos@example.com", "mail/test.txt", name="Ala")
+        queue_mail("ala@example.com", "Temat\nBcc: ktos@example.com", "test.txt", name="Ala")
 
 
 @pytest.fixture()
@@ -179,19 +193,19 @@ def flow_app(app):
 
     @app.post("/_t/ok")
     def t_ok():
-        queue_mail("ok@example.com", "Mail po sukcesie", "mail/test.txt", name="Ok")
+        queue_mail("ok@example.com", "Mail po sukcesie", "test.txt", name="Ok")
         return "ok"
 
     @app.post("/_t/abort")
     def t_abort():
         from flask import abort
 
-        queue_mail("abort@example.com", "Mail po abort", "mail/test.txt", name="Abort")
+        queue_mail("abort@example.com", "Mail po abort", "test.txt", name="Abort")
         abort(400)
 
     @app.post("/_t/rule")
     def t_rule():
-        queue_mail("rule@example.com", "Mail po błędzie reguły", "mail/test.txt", name="Rule")
+        queue_mail("rule@example.com", "Mail po błędzie reguły", "test.txt", name="Rule")
         raise BusinessRuleError("Komunikat testowy")
 
     @app.get("/_t/missing")
@@ -204,13 +218,13 @@ def flow_app(app):
 def test_mail_is_sent_after_successful_response(flow_app, mail_log):
     response = flow_app.test_client().post("/_t/ok")
     assert response.status_code == 200
-    assert "Subject: Mail po sukcesie" in mail_log.read_text(encoding="utf-8")
+    assert "Subject: Mail po sukcesie" in _sent_mails(mail_log)
 
 
 def test_mail_is_not_sent_when_response_is_error(flow_app, mail_log):
     response = flow_app.test_client().post("/_t/abort")
     assert response.status_code == 400
-    assert not mail_log.exists()
+    assert _sent_mails(mail_log) == ""
 
 
 def test_business_rule_error_flashes_and_discards_mail(flow_app, mail_log):
@@ -218,7 +232,7 @@ def test_business_rule_error_flashes_and_discards_mail(flow_app, mail_log):
 
     assert response.status_code == 200
     assert "Komunikat testowy" in response.get_data(as_text=True)
-    assert not mail_log.exists()
+    assert _sent_mails(mail_log) == ""
 
 
 def test_business_rule_error_redirects_to_same_host_referrer(flow_app, mail_log):

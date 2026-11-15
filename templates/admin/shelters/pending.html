@@ -1,0 +1,34 @@
+{% extends "admin/base.html" %}
+{% from "_pagination.html" import pagination as pagination_nav %}
+{% block title %}Placówki do zatwierdzenia{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <h1 class="h4 mb-1">Do zatwierdzenia</h1>
+  <p class="text-secondary mb-0">Zgłoszenia placówek, najstarsze najpierw</p>
+</div>
+
+<div class="card"><div class="card-body">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr><th>Zgłoszono (UTC)</th><th>Nazwa</th><th>Miejscowość</th><th>Zgłaszający</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for s in shelters %}
+        <tr>
+          <td>{{ s.submitted_at }}</td>
+          <td class="fw-semibold">{{ s.name }}</td>
+          <td>{{ s.city }} <small class="text-secondary">({{ s.voivodeship }})</small></td>
+          <td>{{ s.submitter_first_name }} {{ s.submitter_last_name }}<br><small class="text-secondary">{{ s.submitter_email }}</small></td>
+          <td class="text-end"><a href="{{ url_for('admin_shelter_details', shelter_id=s.id) }}" class="btn btn-sm btn-primary">Rozpatrz</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-secondary py-4">Brak zgłoszeń do rozpatrzenia.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination_nav(pagination, "admin_shelter_pending") }}
+</div></div>
+{% endblock %}

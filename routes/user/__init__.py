@@ -71,7 +71,7 @@ def read_user_form(*, creating: bool) -> dict:
 
 
 def read_profile_form() -> dict:
-    """Pola z formularza „Mój profil” (bez e-maila i hasła)."""
+    """Pola z formularza „Mój profil” (e-mail i hasło mają osobne formularze)."""
     return {
         "first_name": read_required_text("first_name", "Imię", MAX_NAME_LENGTH),
         "last_name": read_required_text("last_name", "Nazwisko", MAX_NAME_LENGTH),

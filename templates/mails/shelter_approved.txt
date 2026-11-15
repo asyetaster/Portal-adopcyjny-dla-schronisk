@@ -1,0 +1,6 @@
+Dzień dobry {{ first_name }},
+
+zgłoszenie placówki „{{ shelter_name }}” zostało zatwierdzone.
+Placówka jest już widoczna w katalogu schronisk, a panel placówki jest w pełni aktywny.
+
+Zespół Portalu adopcyjnego

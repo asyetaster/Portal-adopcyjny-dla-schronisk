@@ -1,11 +1,17 @@
-"""Wspólny helper stronicowania.
+"""Wspólny helper stronicowania list zwracanych przez Query.
 
-Zwraca strukturę w tym samym formacie, który zwracał ``ListUsersQuery``:
-``{"items": [...], "pagination": {...}}``.
+Format wyniku: ``{"items": [...], "pagination": {...}}`` — ten sam, którego
+oczekuje ``templates/_pagination.html``.
 """
 
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
+
+
+def like_pattern(value: str) -> str:
+    """Wzorzec ``%value%`` dla ``LIKE ... ESCAPE '\\'`` z escapowaniem ``\\ % _``."""
+    escaped = value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
 
 
 def build_pagination(*, page: int, limit: int, total: int) -> dict:

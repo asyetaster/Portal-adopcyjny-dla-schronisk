@@ -128,12 +128,85 @@ def test_profile_update(app, client):
 
     response = client.post("/account/profile", data={
         "first_name": "Janek", "last_name": "Nowy", "phone": "123456789",
-        "email": "zmiana@example.com",  # ignorowane
+        "email": "zmiana@example.com",  # ignorowane (osobny formularz)
     })
     assert response.status_code == 303
     row = _row(app, user_id)
     assert (row["first_name"], row["last_name"], row["phone"]) == ("Janek", "Nowy", "123456789")
     assert row["email"] == "jan@example.com"
+
+
+def test_change_my_email(app, client):
+    user_id = _user(app, "jan@example.com")
+    _user(app, "zajety@example.com")
+    _login(client, "jan@example.com")
+
+    # Złe hasło.
+    response = client.post("/account/email", data={
+        "email": "nowy@example.com", "current_password": "zle-haslo",
+    })
+    assert response.status_code == 303
+    assert _row(app, user_id)["email"] == "jan@example.com"
+
+    # Zajęty adres.
+    client.post("/account/email", data={
+        "email": "zajety@example.com", "current_password": "demo1234",
+    })
+    assert _row(app, user_id)["email"] == "jan@example.com"
+
+    # Niepoprawny format.
+    response = client.post("/account/email", data={
+        "email": "nie-email", "current_password": "demo1234",
+    })
+    assert response.status_code == 400
+
+    response = client.post("/account/email", data={
+        "email": "nowy@example.com", "current_password": "demo1234",
+    })
+    assert response.status_code == 303
+    assert _row(app, user_id)["email"] == "nowy@example.com"
+    assert client.get("/account/profile").status_code == 200
+
+    client.post("/logout")
+    assert _login(app.test_client(), "nowy@example.com").status_code == 303
+
+
+def test_change_my_password(app, client):
+    user_id = _user(app, "jan@example.com")
+    _login(client, "jan@example.com")
+    old_hash = _row(app, user_id)["password_hash"]
+
+    # Złe obecne hasło, różne powtórzenia, za krótkie.
+    for data in (
+        {"current_password": "zle", "new_password": "nowehaslo1", "new_password_confirm": "nowehaslo1"},
+        {"current_password": "demo1234", "new_password": "nowehaslo1", "new_password_confirm": "inne12345"},
+        {"current_password": "demo1234", "new_password": "krotkie", "new_password_confirm": "krotkie"},
+    ):
+        assert client.post("/account/password", data=data).status_code == 303
+        assert _row(app, user_id)["password_hash"] == old_hash
+
+    response = client.post("/account/password", data={
+        "current_password": "demo1234",
+        "new_password": "nowehaslo1",
+        "new_password_confirm": "nowehaslo1",
+    })
+    assert response.status_code == 303
+    assert _row(app, user_id)["password_hash"] != old_hash
+
+    other = app.test_client()
+    _login(other, "jan@example.com", "demo1234")
+    with other.session_transaction() as sess:
+        assert "user_id" not in sess
+    _login(other, "jan@example.com", "nowehaslo1")
+    with other.session_transaction() as sess:
+        assert sess["user_id"] == user_id
+
+
+def test_change_email_and_password_require_login(client):
+    for path in ("/account/email", "/account/password"):
+        response = client.post(path, data={})
+        assert response.status_code == 302
+        assert "/login" in response.headers["Location"]
 
 
 # --- Blokowanie ----------------------------------------------------------

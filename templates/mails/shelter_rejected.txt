@@ -1,0 +1,9 @@
+Dzień dobry {{ first_name }},
+
+zgłoszenie placówki „{{ shelter_name }}” zostało odrzucone.
+
+Powód: {{ reason }}
+
+Możesz poprawić dane i wysłać zgłoszenie ponownie w zakładce „Moje placówki”.
+
+Zespół Portalu adopcyjnego

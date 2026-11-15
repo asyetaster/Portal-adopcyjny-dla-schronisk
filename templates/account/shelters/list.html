@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Moje placówki{% endblock %}
+
+{% block content %}
+<h1>Moje placówki</h1>
+<p><a href="{{ url_for('shelter_new') }}">+ Zgłoś nową placówkę</a></p>
+
+{% for s in shelters %}
+  <article>
+    <h2>{{ s.name }}</h2>
+    <p>
+      Status: <strong>{{ status_labels.get(s.status, s.status) }}</strong>
+      · {{ 'kierownik' if s.is_manager else 'pracownik' }}
+      · {{ s.city }}, woj. {{ s.voivodeship }}
+    </p>
+    {% if s.status == 'Rejected' %}
+      <p>Powód odrzucenia: {{ s.rejection_reason }}</p>
+      {% if s.is_manager %}
+        <p><a href="{{ url_for('shelter_resubmit_form', shelter_id=s.id) }}">Popraw i zgłoś ponownie</a></p>
+      {% endif %}
+    {% elif s.status == 'Blocked' %}
+      <p>Powód blokady: {{ s.blocked_reason }}</p>
+    {% endif %}
+    <p><a href="{{ url_for('panel_dashboard', shelter_id=s.id) }}">Przejdź do panelu placówki →</a></p>
+  </article>
+{% else %}
+  <p>Nie pracujesz jeszcze w żadnej placówce.</p>
+{% endfor %}
+{% endblock %}

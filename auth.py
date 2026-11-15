@@ -89,3 +89,41 @@ def admin_required(view):
         return view(*args, **kwargs)
 
     return wrapper
+
+
+def shelter_required(manager: bool = False, write: bool = False):
+    """Dekorator widoku panelu placówki (``shelter_id`` z adresu).
+
+    - brak zalogowania → ``/login?next=...``,
+    - użytkownik nie jest pracownikiem tej placówki → 403 (AC-005, BR-049);
+      administrator portalu nie ma tu wyjątku,
+    - ``manager=True`` → wymagany kierownik placówki,
+    - ``write=True`` i placówka ``Blocked`` → 403 (R5: panel tylko do odczytu).
+
+    Ustawia ``g.shelter`` (wpis z ``g.user["shelters"]``).
+    """
+
+    def decorator(view):
+        @functools.wraps(view)
+        def wrapper(*args, **kwargs):
+            if g.user is None:
+                return redirect(url_for("login", next=request.path))
+
+            shelter_id = kwargs.get("shelter_id")
+            shelter = next(
+                (s for s in g.user["shelters"] if s["id"] == shelter_id),
+                None,
+            )
+            if shelter is None:
+                abort(403)
+            if manager and not shelter["is_manager"]:
+                abort(403)
+            if write and shelter["status"] == "Blocked":
+                abort(403)
+
+            g.shelter = shelter
+            return view(*args, **kwargs)
+
+        return wrapper
+
+    return decorator

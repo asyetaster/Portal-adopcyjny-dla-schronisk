@@ -3,5 +3,8 @@
 __pycache__/
 app.db
 /tmp.txt
+# Maile zapisywane przez mailer.py zamiast wysyłki
+/instance/mails/
+
 instance/
 static/uploads/

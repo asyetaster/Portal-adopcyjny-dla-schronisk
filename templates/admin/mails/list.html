@@ -1,0 +1,39 @@
+{% extends "admin/base.html" %}
+{% block title %}Wysłane maile{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <h1 class="h4 mb-1">Maile</h1>
+  <p class="text-secondary mb-0">Maile nie są wysyłane — portal zapisuje je jako pliki <code>.eml</code>.</p>
+</div>
+
+<div class="card"><div class="card-body">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr><th>Data (UTC)</th><th>Do</th><th>Temat</th><th class="text-end">Akcje</th></tr>
+      </thead>
+      <tbody>
+        {% for m in mails %}
+        <tr>
+          <td class="text-nowrap">{{ m.date }}</td>
+          <td>{{ m.to }}</td>
+          <td><a href="{{ url_for('admin_mail_details', name=m.name) }}" class="text-decoration-none">{{ m.subject }}</a></td>
+          <td class="text-end text-nowrap">
+            <a href="{{ url_for('admin_mail_details', name=m.name) }}" class="btn btn-sm btn-outline-secondary" title="Podgląd" aria-label="Podgląd">
+              <i class="bi bi-eye"></i>
+            </a>
+            <a href="{{ url_for('admin_mail_download', name=m.name) }}" class="btn btn-sm btn-outline-primary" title="Pobierz .eml" aria-label="Pobierz .eml">
+              <i class="bi bi-download"></i>
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="text-center text-secondary py-4">Brak zapisanych maili.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if mails %}<small class="text-secondary d-block mt-3">Łącznie: {{ mails|length }}</small>{% endif %}
+</div></div>
+{% endblock %}
