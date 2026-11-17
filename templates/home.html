@@ -3,13 +3,16 @@
 {% block title %}Portal adopcyjny{% endblock %}
 
 {% block content %}
-<h1>Portal adopcyjny dla schronisk</h1>
-{% if g.user %}
-  <p>Witaj, {{ g.user['first_name'] }}!</p>
-{% else %}
-  <p>
-    <a href="{{ url_for('login') }}">Zaloguj się</a> albo
-    <a href="{{ url_for('register_form') }}">załóż konto</a>.
-  </p>
-{% endif %}
+<section class="hero">
+  <h1>Znajdź przyjaciela na całe życie</h1>
+  <p>Portal adopcyjny dla schronisk. Przeglądaj schroniska i zgłoś swoją placówkę.</p>
+  {% if g.user %}
+    <p>Witaj, {{ g.user['first_name'] }}!</p>
+    <a class="btn" href="{{ url_for('shelter_list') }}">Zobacz schroniska</a>
+  {% else %}
+    <a class="btn" href="{{ url_for('shelter_list') }}">Zobacz schroniska</a>
+    <a class="btn ghost" href="{{ url_for('login') }}">Zaloguj się</a>
+    <a class="btn ghost" href="{{ url_for('register_form') }}">Załóż konto</a>
+  {% endif %}
+</section>
 {% endblock %}

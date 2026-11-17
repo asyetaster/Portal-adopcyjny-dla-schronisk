@@ -4,20 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Portal adopcyjny{% endblock %}</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
-    nav { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-bottom: 1rem; }
-    nav form { margin: 0; }
-    .message { background: #e6f4ea; border: 1px solid #9ccfa8; padding: .5rem .75rem; }
-    label, input, button { font-size: 1rem; }
-    .field { margin-bottom: .75rem; }
-    .field label { display: block; margin-bottom: .25rem; }
-    .field input, .field select, .field textarea { width: 100%; box-sizing: border-box; padding: .4rem; font: inherit; }
-    .hint { color: #666; font-size: .875rem; }
-  </style>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&family=Open+Sans:wght@400;600;700;800&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
 </head>
 <body>
-  <nav>
+<header class="site-header"><div class="in">
+  <a class="logo" href="{{ url_for('home') }}">Łapa <span>w</span> łapę</a>
+  <nav class="site-nav">
     <a href="{{ url_for('home') }}">Strona główna</a>
     <a href="{{ url_for('shelter_list') }}">Schroniska</a>
     {% if g.user %}
@@ -32,12 +25,19 @@
       </form>
     {% else %}
       <a href="{{ url_for('login') }}">Zaloguj</a>
-      <a href="{{ url_for('register_form') }}">Załóż konto</a>
+      <a class="btn" href="{{ url_for('register_form') }}">Załóż konto</a>
     {% endif %}
   </nav>
+</div></header>
+<main class="site-main">
   {% for flashed in get_flashed_messages() %}
     <p class="message">{{ flashed }}</p>
   {% endfor %}
   {% block content %}{% endblock %}
+</main>
+<footer class="site-footer"><div class="in">
+  <a class="logo" href="{{ url_for('home') }}">Łapa <span>w</span> łapę</a>
+  <p>Portal wspiera adopcję, ale nie podejmuje decyzji o adopcji.</p>
+</div></footer>
 </body>
 </html>
