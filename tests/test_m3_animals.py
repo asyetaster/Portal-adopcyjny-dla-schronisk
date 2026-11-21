@@ -879,3 +879,40 @@ def test_shelter_profile_lists_its_animals(app, client, world):  # BR-017
     html = client.get(f"/shelters/{world['shelter_a']}").get_data(as_text=True)
     assert "Burek" in html and "Reks" not in html and "Szkic" not in html
     assert client.get(f"/shelters/{world['shelter_c']}").status_code == 404
+
+
+# --- Moderacja w panelu admina ---------------------------------------------
+
+def test_admin_hides_and_restores_card(app, client, world):  # R6, BR-012
+    animal_id = _published(app, world, "Sporny")
+    _login(client, "admin@example.com")
+    assert "Sporny" in client.get("/admin/animals").get_data(as_text=True)
+
+    client.post(f"/admin/animals/{animal_id}/hide", data={"reason": ""})
+    assert _row(app, animal_id)["is_hidden"] == 0  # powód wymagany
+
+    resp = client.post(f"/admin/animals/{animal_id}/hide", data={"reason": "Nieprawdziwe dane"})
+    assert resp.status_code == 303
+    assert client.get(f"/animals/{animal_id}").status_code == 404
+    assert "Sporny" not in client.get("/animals").get_data(as_text=True)
+    assert "Nieprawdziwe dane" in client.get("/admin/animals?hidden=1").get_data(as_text=True)
+
+    # Placówka widzi kartę i powód w panelu, status bez zmian.
+    client.post("/logout")
+    _login(client, "a@example.com")
+    panel = client.get(_panel(world["shelter_a"], f"/{animal_id}")).get_data(as_text=True)
+    assert "Nieprawdziwe dane" in panel and _row(app, animal_id)["status"] == "Available"
+    client.post("/logout")
+
+    _login(client, "admin@example.com")
+    client.post(f"/admin/animals/{animal_id}/unhide")
+    assert client.get(f"/animals/{animal_id}").status_code == 200
+
+
+def test_admin_animals_require_admin(app, client, world):
+    animal_id = _published(app, world)
+    assert client.get("/admin/animals").status_code == 302  # → /login
+    _login(client, "a@example.com")
+    assert client.get("/admin/animals").status_code == 403
+    assert client.post(f"/admin/animals/{animal_id}/hide", data={"reason": "x"}).status_code == 403
+    assert _row(app, animal_id)["is_hidden"] == 0
