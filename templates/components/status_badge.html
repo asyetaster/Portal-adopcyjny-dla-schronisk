@@ -1,0 +1,18 @@
+{# Plakietka statusu (panel i administracja, Bootstrap).
+
+   Użycie:
+     {% from "components/status_badge.html" import status_badge %}
+     {{ status_badge(animal.status, "animal") }}
+
+   `kind` to grupa z labels.py (jak w filtrze |label). Kolor zależy od wartości.
+   M0.5 może rozszerzyć makro o stronę klienta bez zmiany sposobu wywołania. #}
+{% macro status_badge(value, kind) %}
+{%- set classes = {
+  'Draft': 'text-bg-secondary',
+  'Available': 'text-bg-success',
+  'AdoptionInProgress': 'text-bg-info',
+  'Adopted': 'text-bg-primary',
+  'Withdrawn': 'text-bg-dark',
+} -%}
+<span class="badge {{ classes.get(value, 'text-bg-secondary') }}">{{ value|label(kind) }}</span>
+{%- endmacro %}

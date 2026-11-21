@@ -1,0 +1,27 @@
+{% extends "panel/base.html" %}
+{% block title %}Nowa karta zwierzęcia{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-4">Nowa karta zwierzęcia</h1>
+<div class="card"><div class="card-body">
+  <form method="post" action="{{ url_for('panel_animal_create', shelter_id=g.shelter['id']) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="mb-3">
+      <label for="name" class="form-label">Imię *</label>
+      <input type="text" id="name" name="name" class="form-control" maxlength="100" required>
+    </div>
+    <div class="mb-3">
+      <label for="species" class="form-label">Gatunek *</label>
+      <select id="species" name="species" class="form-select" required>
+        <option value="">— wybierz —</option>
+        {% for value, label_text in species_labels.items() %}
+          <option value="{{ value }}">{{ label_text }}</option>
+        {% endfor %}
+      </select>
+      <div class="form-text">Gatunek można później zmienić tylko w szkicu.</div>
+    </div>
+    <button type="submit" class="btn btn-primary">Utwórz szkic</button>
+    <a href="{{ url_for('panel_animal_list', shelter_id=g.shelter['id']) }}" class="btn btn-outline-secondary">Anuluj</a>
+  </form>
+</div></div>
+{% endblock %}

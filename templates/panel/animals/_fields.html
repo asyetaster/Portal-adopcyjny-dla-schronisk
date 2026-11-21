@@ -1,0 +1,49 @@
+{# Pola danych podstawowych karty. Wymaga w kontekście: `animal`, `species_labels`,
+   `sex_labels`, `size_labels`. #}
+{% macro text_field(name, label, required=False, maxlength=100, hint="") %}
+<div class="mb-3">
+  <label for="{{ name }}" class="form-label">{{ label }}{% if required %} *{% endif %}</label>
+  <input type="text" id="{{ name }}" name="{{ name }}" class="form-control"
+         value="{{ animal.get(name) or '' }}" maxlength="{{ maxlength }}" {% if required %}required{% endif %}>
+  {% if hint %}<div class="form-text">{{ hint }}</div>{% endif %}
+</div>
+{% endmacro %}
+{% macro number_field(name, label, hint="") %}
+<div class="mb-3">
+  <label for="{{ name }}" class="form-label">{{ label }}</label>
+  <input type="number" id="{{ name }}" name="{{ name }}" class="form-control" min="0" max="600"
+         value="{{ animal.get(name) if animal.get(name) is not none else '' }}">
+  {% if hint %}<div class="form-text">{{ hint }}</div>{% endif %}
+</div>
+{% endmacro %}
+{% macro select_field(name, label, options, current, required=False, blank="— wybierz —") %}
+<div class="mb-3">
+  <label for="{{ name }}" class="form-label">{{ label }}{% if required %} *{% endif %}</label>
+  <select id="{{ name }}" name="{{ name }}" class="form-select" {% if required %}required{% endif %}>
+    {% if not required %}<option value="">{{ blank }}</option>{% endif %}
+    {% for value, text in options.items() %}
+      <option value="{{ value }}" {% if current == value %}selected{% endif %}>{{ text }}</option>
+    {% endfor %}
+  </select>
+</div>
+{% endmacro %}
+
+{{ text_field("name", "Imię", required=True) }}
+{{ select_field("species", "Gatunek", species_labels, animal.species, required=True) }}
+{{ select_field("sex", "Płeć", sex_labels, animal.sex, required=True) }}
+{{ text_field("breed", "Rasa", hint="Pole opcjonalne. Dla mieszańców wpisz „mieszaniec”.") }}
+{{ select_field("size", "Wielkość", size_labels, animal.size, blank="— nieustalona —") }}
+<div class="row">
+  <div class="col-md-6">{{ number_field("age_min_months", "Wiek od (miesiące)", "Np. 18 = półtora roku.") }}</div>
+  <div class="col-md-6">{{ number_field("age_max_months", "Wiek do (miesiące)", "Zostaw puste, jeśli znasz wiek dokładnie.") }}</div>
+</div>
+{{ text_field("temperament", "Temperament", maxlength=200, hint="Tagi po przecinku, np. łagodny, towarzyski.") }}
+<div class="mb-3">
+  <label for="description" class="form-label">Opis charakteru</label>
+  <textarea id="description" name="description" class="form-control" rows="5" maxlength="5000">{{ animal.description or '' }}</textarea>
+</div>
+<div class="mb-3">
+  <label for="daily_needs" class="form-label">Codzienne potrzeby</label>
+  <textarea id="daily_needs" name="daily_needs" class="form-control" rows="4" maxlength="5000">{{ animal.daily_needs or '' }}</textarea>
+  <div class="form-text">Np. liczba spacerów, dieta, leki.</div>
+</div>

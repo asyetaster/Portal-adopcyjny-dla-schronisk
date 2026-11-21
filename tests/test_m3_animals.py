@@ -565,3 +565,101 @@ def test_moderation_list_shows_all_shelters_and_hidden_first(app, world):
         assert result["pagination"]["total"] == 5  # z szkicem
         assert [a["name"] for a in query.execute(hidden_only=True)["items"]] == ["Reks"]
         assert [a["name"] for a in query.execute(search="Schronisko B")["items"]] == ["Reks"]
+
+
+# --- Trasy panelu (szkic, edycja, wymagania) ------------------------------
+
+def _panel(sid, suffix=""):
+    return f"/panel/shelters/{sid}/animals{suffix}"
+
+
+def test_panel_draft_flow(app, client, world):
+    sid = world["shelter_a"]
+    _login(client, "a@example.com")
+
+    assert client.get(_panel(sid)).status_code == 200
+    assert client.get(_panel(sid, "/new")).status_code == 200
+    resp = client.post(_panel(sid), data={"name": "Bonifacy", "species": "Dog"})
+    assert resp.status_code == 303
+    animal_id = _sql(app, "SELECT id FROM animals WHERE name = 'Bonifacy'")[0]["id"]
+    assert resp.headers["Location"].endswith(_panel(sid, f"/{animal_id}/edit"))
+    assert client.get(_panel(sid, f"/{animal_id}/edit")).status_code == 200
+
+    resp = client.post(_panel(sid, f"/{animal_id}"), data={
+        "name": "Bonifacy", "species": "Dog", "sex": "Male", "breed": "Owczarek",
+        "size": "Large", "age_min_months": "18", "age_max_months": "",
+        "description": "Radosny.", "daily_needs": "Długie spacery.", "temperament": "żywy",
+    })
+    assert resp.status_code == 303
+    row = _row(app, animal_id)
+    assert (row["breed"], row["size"], row["age_min_months"], row["age_max_months"]) == ("Owczarek", "Large", 18, 18)
+
+    resp = client.post(_panel(sid, f"/{animal_id}/requirements"), data={
+        "good_with_children": "Yes", "good_with_dogs": "No", "good_with_cats": "Unknown",
+        "special_care_required": "No", "activity_level": "High", "min_experience": "",
+    })
+    assert resp.status_code == 303
+
+    page = client.get(_panel(sid, f"/{animal_id}")).get_data(as_text=True)
+    assert "Bonifacy" in page and "1 rok 6 mies." in page and "Owczarek" in page
+    assert "Przed publikacją uzupełnij: co najmniej jedno zdjęcie" in page
+    assert "Bonifacy" in client.get(_panel(sid)).get_data(as_text=True)
+
+
+def test_panel_business_error_flashes_and_returns(app, client, world):
+    _login(client, "a@example.com")
+    resp = client.post(_panel(world["shelter_a"]), data={"name": " ", "species": "Dog"},
+                       headers={"Referer": "http://localhost" + _panel(world["shelter_a"], "/new")})
+    assert resp.status_code == 303 and resp.headers["Location"].endswith("/animals/new")
+    assert "Imię: pole nie może być puste" in client.get(_panel(world["shelter_a"], "/new")).get_data(as_text=True)
+    assert _sql(app, "SELECT COUNT(*) AS n FROM animals")[0]["n"] == 0
+
+
+def test_panel_is_isolated_between_shelters(app, client, world):  # AC-005
+    animal_b = _animal(app, world["manager_b"], world["shelter_b"], "Cudzy")
+    _login(client, "a@example.com")
+    # Cudza placówka: 403 dla każdej akcji.
+    assert client.get(_panel(world["shelter_b"])).status_code == 403
+    assert client.post(_panel(world["shelter_b"]), data={"name": "X", "species": "Dog"}).status_code == 403
+    # Własna placówka, ale ID cudzej karty: 404 (wspólna przestrzeń ID nie przecieka).
+    for suffix in ("", "/edit", "/requirements"):
+        assert client.get(_panel(world["shelter_a"], f"/{animal_b}{suffix}")).status_code == 404
+    resp = client.post(_panel(world["shelter_a"], f"/{animal_b}"), data={
+        "name": "Hak", "species": "Dog", "sex": "Male", "description": "", "daily_needs": ""})
+    assert resp.status_code == 404
+    assert _row(app, animal_b)["name"] == "Cudzy"
+
+
+def test_panel_requires_login_and_blocks_read_only_shelter(app, client, world):
+    assert client.get(_panel(world["shelter_a"])).status_code == 302  # → /login
+    _run(app, BlockShelterCommand, actor_id=world["admin"], shelter_id=world["shelter_a"], reason="X")
+    _login(client, "a@example.com")
+    assert client.get(_panel(world["shelter_a"])).status_code == 200  # odczyt działa (R5)
+    assert client.post(_panel(world["shelter_a"]), data={"name": "X", "species": "Dog"}).status_code == 403
+
+
+def test_pending_shelter_can_prepare_drafts_in_panel(app, client, world):  # R3, AC-004
+    _login(client, "c@example.com")
+    resp = client.post(_panel(world["shelter_c"]), data={"name": "Szkicowy", "species": "Cat"})
+    assert resp.status_code == 303
+    assert _sql(app, "SELECT status FROM animals WHERE name = 'Szkicowy'")[0]["status"] == "Draft"
+
+
+def test_dashboard_shows_animal_counters(app, client, world):
+    _published(app, world)
+    _sql(app, "UPDATE animals SET last_confirmed_at = strftime('%Y-%m-%dT%H:%M:%SZ','now','-40 days')")
+    _login(client, "a@example.com")
+    page = client.get(f"/panel/shelters/{world['shelter_a']}").get_data(as_text=True)
+    assert "do potwierdzenia: 1" in page and "do adopcji: 1" in page
+
+
+def test_format_age_in_polish():
+    from labels import format_age
+
+    assert format_age(None, None) == "wiek nieustalony"
+    assert format_age(8, 8) == "8 mies."
+    assert format_age(12, 12) == "1 rok"
+    assert format_age(24, 24) == "2 lata"
+    assert format_age(60, 60) == "5 lat"
+    assert format_age(144, 144) == "12 lat"  # nie „12 lata”
+    assert format_age(18, 30) == "1 rok 6 mies. – 2 lata 6 mies."

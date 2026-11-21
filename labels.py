@@ -84,3 +84,27 @@ def label(value: str | None, group: str) -> str:
     if value is None:
         return "—"
     return LABELS.get(group, {}).get(value, value)
+
+
+def _years(n: int) -> str:
+    if n == 1:
+        return "1 rok"
+    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
+        return f"{n} lata"
+    return f"{n} lat"
+
+
+def _age_part(months: int) -> str:
+    if months < 12:
+        return f"{months} mies."
+    years, rest = divmod(months, 12)
+    return _years(years) + (f" {rest} mies." if rest else "")
+
+
+def format_age(age_min_months: int | None, age_max_months: int | None) -> str:
+    """Wiek lub przedział wieku po polsku: ``8 mies.``, ``2 lata``, ``2 lata – 3 lata``."""
+    if age_min_months is None or age_max_months is None:
+        return "wiek nieustalony"
+    if age_min_months == age_max_months:
+        return _age_part(age_min_months)
+    return f"{_age_part(age_min_months)} – {_age_part(age_max_months)}"

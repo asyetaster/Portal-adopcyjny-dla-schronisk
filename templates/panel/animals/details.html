@@ -1,0 +1,89 @@
+{% extends "panel/base.html" %}
+{% from "components/status_badge.html" import status_badge %}
+{% block title %}{{ animal.name }}{% endblock %}
+
+{% block content %}
+{% set sid = g.shelter['id'] %}
+{% set can_edit = g.shelter['status'] != 'Blocked' and animal.status != 'Adopted' %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <div>
+    <h1 class="h4 mb-1">{{ animal.name }}</h1>
+    {{ status_badge(animal.status, "animal") }}
+    {% if animal.is_hidden %}<span class="badge text-bg-danger">Ukryta przez administratora</span>{% endif %}
+  </div>
+  <a href="{{ url_for('panel_animal_list', shelter_id=sid) }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Wszystkie karty
+  </a>
+</div>
+
+{% if animal.is_hidden %}
+  <div class="alert alert-danger">
+    Administrator ukrył tę kartę w katalogu. Powód: {{ animal.hidden_reason }}
+  </div>
+{% endif %}
+{% if animal.status == 'Withdrawn' %}
+  <div class="alert alert-warning">Karta wycofana. Powód: {{ animal.withdrawn_reason }}</div>
+{% endif %}
+{% if animal.needs_confirmation %}
+  <div class="alert alert-warning">
+    Dostępność wymaga potwierdzenia: ostatnie potwierdzenie z {{ animal.last_confirmed_at[:10] }}.
+  </div>
+{% endif %}
+{% if animal.status == 'Draft' or animal.status == 'Withdrawn' %}
+  {% if animal.missing %}
+    <div class="alert alert-warning">Przed publikacją uzupełnij: {{ animal.missing|join(", ") }}.</div>
+  {% endif %}
+{% endif %}
+
+<div class="card mb-4"><div class="card-body">
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    <h2 class="h6 mb-0">Dane podstawowe</h2>
+    {% if can_edit %}
+      <a href="{{ url_for('panel_animal_edit', shelter_id=sid, animal_id=animal.id) }}"
+         class="btn btn-sm btn-outline-primary">Edytuj</a>
+    {% endif %}
+  </div>
+  <dl class="row mb-0">
+    <dt class="col-sm-3 text-secondary">Gatunek</dt><dd class="col-sm-9">{{ animal.species|label("species") }}</dd>
+    <dt class="col-sm-3 text-secondary">Płeć</dt><dd class="col-sm-9">{{ animal.sex|label("sex") }}</dd>
+    <dt class="col-sm-3 text-secondary">Rasa</dt><dd class="col-sm-9">{{ animal.breed or '—' }}</dd>
+    <dt class="col-sm-3 text-secondary">Wiek</dt><dd class="col-sm-9">{{ animal.age_min_months|age(animal.age_max_months) }}</dd>
+    <dt class="col-sm-3 text-secondary">Wielkość</dt><dd class="col-sm-9">{{ animal.size|label("size") if animal.size else '—' }}</dd>
+    <dt class="col-sm-3 text-secondary">Temperament</dt><dd class="col-sm-9">{{ (animal.temperament or '—')|replace(",", ", ") }}</dd>
+    <dt class="col-sm-3 text-secondary">Opis</dt><dd class="col-sm-9">{{ animal.description or '—' }}</dd>
+    <dt class="col-sm-3 text-secondary">Codzienne potrzeby</dt><dd class="col-sm-9">{{ animal.daily_needs or '—' }}</dd>
+    <dt class="col-sm-3 text-secondary">Ostatnie potwierdzenie</dt>
+    <dd class="col-sm-9">
+      {% if animal.last_confirmed_at %}
+        {{ animal.last_confirmed_at }} ({{ animal.confirmed_by_first_name }} {{ animal.confirmed_by_last_name }})
+      {% else %}—{% endif %}
+    </dd>
+  </dl>
+</div></div>
+
+<div class="card mb-4"><div class="card-body">
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    <h2 class="h6 mb-0">Wymagania opiekuńcze</h2>
+    {% if can_edit %}
+      <a href="{{ url_for('panel_animal_requirements_edit', shelter_id=sid, animal_id=animal.id) }}"
+         class="btn btn-sm btn-outline-primary">Edytuj</a>
+    {% endif %}
+  </div>
+  {% if animal.requirements %}
+    {% set r = animal.requirements %}
+    <dl class="row mb-0">
+      <dt class="col-sm-3 text-secondary">Dzieci</dt><dd class="col-sm-9">{{ r.good_with_children|label("tri_state") }}</dd>
+      <dt class="col-sm-3 text-secondary">Psy</dt><dd class="col-sm-9">{{ r.good_with_dogs|label("tri_state") }}</dd>
+      <dt class="col-sm-3 text-secondary">Koty</dt><dd class="col-sm-9">{{ r.good_with_cats|label("tri_state") }}</dd>
+      <dt class="col-sm-3 text-secondary">Aktywność</dt><dd class="col-sm-9">{{ r.activity_level|label("activity") if r.activity_level else '—' }}</dd>
+      <dt class="col-sm-3 text-secondary">Doświadczenie</dt><dd class="col-sm-9">{{ r.min_experience|label("experience") if r.min_experience else '—' }}</dd>
+      <dt class="col-sm-3 text-secondary">Szczególna opieka</dt><dd class="col-sm-9">{{ r.special_care_required|label("tri_state") }}{% if r.special_care_notes %}: {{ r.special_care_notes }}{% endif %}</dd>
+      <dt class="col-sm-3 text-secondary">Do omówienia</dt><dd class="col-sm-9">{{ r.notes_to_discuss or '—' }}</dd>
+    </dl>
+  {% else %}
+    <p class="text-secondary mb-0">Nie uzupełniono. Kandydaci zobaczą „brak danych”.</p>
+  {% endif %}
+</div></div>
+{# Zdjęcia i akcje (publikacja, wycofanie, potwierdzenie) dochodzą w następnym commicie. #}
+{% endblock %}
