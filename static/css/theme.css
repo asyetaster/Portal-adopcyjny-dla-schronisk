@@ -54,3 +54,25 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 12p
    dziedziczyłaby ciemny kolor na ciemnym tle ===== */
 .card{color:var(--ink)}
 .table{--bs-table-color:var(--ink);--bs-table-bg:transparent;--bs-table-border-color:var(--line);--bs-table-hover-color:var(--ink);--bs-table-hover-bg:var(--ok-bg)}
+/* ===== karty zwierząt (M3) — kolory tylko ze zmiennych motywu ===== */
+.animal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px;margin:18px 0}
+.animal-card{padding:0!important;overflow:hidden;margin:0!important;display:flex;flex-direction:column}
+.animal-card .photo{display:block;aspect-ratio:4/3;background:var(--ok-bg);text-decoration:none}
+.animal-card .photo img{width:100%;height:100%;object-fit:cover;display:block}
+.no-photo{display:flex;align-items:center;justify-content:center;height:100%;font-size:56px}
+.animal-card .body{padding:14px 18px 18px}
+.animal-card h3{margin:0;font-size:32px}.animal-card h3 a{color:var(--ink);text-decoration:none}.animal-card h3 a:hover{color:var(--pink)}
+.meta{margin:2px 0;color:var(--muted);font-size:14px}
+.tag{display:inline-block;border-radius:999px;padding:3px 12px;margin:6px 6px 0 0;font-size:13px;font-weight:700;background:var(--ok-bg);color:var(--ok)}
+.tag.warn{background:#fbdde6;color:#7a1f3d}.tag.info{background:#e1ecfb;color:#1f3d7a}
+form.filters{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;max-width:none;margin:16px 0}
+.filters .field{margin:0;min-width:150px}.filters fieldset{border:0;padding:0;margin:0}
+.filters legend{font-weight:700;font-size:13px;color:var(--brand);text-transform:uppercase;letter-spacing:.05em;padding:0}
+.filters .checks label{font-weight:400;margin-right:12px;text-transform:none;letter-spacing:0;color:var(--ink);font-size:15px}
+.animal-layout{display:grid;gap:28px;grid-template-columns:1fr}
+@media(min-width:900px){.animal-layout{grid-template-columns:1.1fr 1fr}}
+.gallery .main img{width:100%;border-radius:24px;display:block;aspect-ratio:4/3;object-fit:cover}
+.gallery .thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.gallery .thumbs img{width:84px;height:84px;object-fit:cover;border-radius:14px;display:block}
+dl.facts{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:0}
+dl.facts dt{color:var(--muted);font-weight:600}dl.facts dd{margin:0}

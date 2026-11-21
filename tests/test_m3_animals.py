@@ -781,3 +781,101 @@ def test_panel_actions_on_other_shelters_card_are_denied(app, client, world):  #
 
     row = _row(app, animal_a)
     assert row["status"] == "Available" and len(_photos(app, animal_a)) == 1
+    
+
+# --- Strony publiczne ------------------------------------------------------
+
+def test_home_shows_search_and_latest_cards(app, client, world):
+    html = client.get("/").get_data(as_text=True)
+    assert "Znajdź przyjaciela" in html and "Najnowsze ogłoszenia" in html
+    assert "nikt nie opublikował" in html
+
+    _published(app, world, "Bohater")
+    html = client.get("/").get_data(as_text=True)
+    assert "Bohater" in html and "nikt nie opublikował" not in html
+
+
+def test_catalog_page_filters_via_query_string(app, client, world):  # AC-001
+    _catalog(app, world)
+    html = client.get("/animals?species=Dog&size=Medium&voivodeship=kujawsko-pomorskie"
+                      "&age_from=2&age_to=6").get_data(as_text=True)
+    assert "Reks" in html and "Burek" not in html and "Mruczek" not in html
+    assert "Znaleziono: 1" in html
+
+    html = client.get("/animals?size=Small&size=Medium&species=Dog").get_data(as_text=True)
+    assert all(name in html for name in ("Burek", "Maly", "Reks")) and "Mruczek" not in html
+    # Szkic nie wycieka do katalogu.
+    assert "Szkic" not in client.get("/animals").get_data(as_text=True)
+
+
+def test_catalog_ignores_garbage_filters(client, world):
+    resp = client.get("/animals?species=Smok&sex=x&size=Giant&age_from=abc&age_to=-4"
+                      "&voivodeship=Atlantyda&sort=drop&page=zzz&shelter_id=nie")
+    assert resp.status_code == 200
+
+
+def test_catalog_shelter_filter_and_in_progress_checkbox(app, client, world):  # BR-017, BR-020
+    ids = _catalog(app, world)
+    html = client.get(f"/animals?shelter_id={world['shelter_b']}").get_data(as_text=True)
+    assert "Reks" in html and "Burek" not in html and "Tylko z placówki" in html
+    # Niezatwierdzona placówka: filtr jest po cichu pomijany.
+    assert "Burek" in client.get(f"/animals?shelter_id={world['shelter_c']}").get_data(as_text=True)
+
+    _sql(app, "UPDATE animals SET status = 'AdoptionInProgress' WHERE id = :id", id=ids["burek"])
+    assert "Burek" not in client.get("/animals").get_data(as_text=True)
+    html = client.get("/animals?in_progress=1").get_data(as_text=True)
+    assert "Burek" in html and "W trakcie adopcji" in html
+
+
+def test_catalog_pagination_keeps_filters(app, client, world):
+    for i in range(13):
+        _published(app, world, f"Pies{i:02d}")
+    html = client.get("/animals?species=Dog&sort=confirmed").get_data(as_text=True)
+    assert "Strona 1 z 2" in html and "page=2" in html
+    assert "species=Dog" in html and "sort=confirmed" in html
+    page2 = client.get("/animals?species=Dog&sort=confirmed&page=2").get_data(as_text=True)
+    assert page2.count('class="animal-card"') == 1  # 13 kart, 12 na stronę
+
+
+def test_animal_page_shows_details_and_hides_unavailable_cards(app, client, world):  # AC-003
+    animal_id = _published(app, world, "Wąsacz", species="Cat", size="Small")
+    _run(app, UpdateAnimalCareRequirementsCommand, actor_id=world["manager_a"],
+         shelter_id=world["shelter_a"], animal_id=animal_id, good_with_children="Unknown",
+         good_with_dogs="No", good_with_cats="Yes", special_care_required="No")
+    resp = client.get(f"/animals/{animal_id}")
+    html = resp.get_data(as_text=True)
+    assert resp.status_code == 200
+    assert all(x in html for x in ("Wąsacz", "Kot", "Schronisko A", "kontakt@example.com",
+                                   "uploads/animals/W%C4%85sacz.jpg", "Spokojny pies."))
+    assert "Nieznane" in html  # BR-010: „nieznane” widoczne wprost, nie jako „nie”
+    assert "wymaga potwierdzenia" not in html
+
+    _sql(app, "UPDATE animals SET last_confirmed_at = strftime('%Y-%m-%dT%H:%M:%SZ','now','-31 days') WHERE id = :id", id=animal_id)
+    assert "Dostępność wymaga potwierdzenia" in client.get(f"/animals/{animal_id}").get_data(as_text=True)
+
+    draft = _animal(app, world["manager_a"], world["shelter_a"], "Szkic")
+    assert client.get(f"/animals/{draft}").status_code == 404
+    assert client.get("/animals/99999").status_code == 404
+
+    _run(app, HideAnimalProfileCommand, actor_id=world["admin"], animal_id=animal_id, reason="x")
+    assert client.get(f"/animals/{animal_id}").status_code == 404
+    _run(app, UnhideAnimalProfileCommand, actor_id=world["admin"], animal_id=animal_id)
+    _run(app, WithdrawAnimalProfileCommand, actor_id=world["manager_a"],
+         shelter_id=world["shelter_a"], animal_id=animal_id, reason="Adopcja")
+    assert client.get(f"/animals/{animal_id}").status_code == 404  # BR-012
+
+
+def test_card_text_is_escaped(app, client, world):
+    animal_id = _published(app, world, "<script>alert(1)</script>")
+    for url in ("/", "/animals", f"/animals/{animal_id}"):
+        html = client.get(url).get_data(as_text=True)
+        assert "<script>alert(1)</script>" not in html, url
+
+
+def test_shelter_profile_lists_its_animals(app, client, world):  # BR-017
+    _catalog(app, world)
+    html = client.get(f"/shelters/{world['shelter_b']}").get_data(as_text=True)
+    assert "Reks" in html and "Burek" not in html
+    html = client.get(f"/shelters/{world['shelter_a']}").get_data(as_text=True)
+    assert "Burek" in html and "Reks" not in html and "Szkic" not in html
+    assert client.get(f"/shelters/{world['shelter_c']}").status_code == 404

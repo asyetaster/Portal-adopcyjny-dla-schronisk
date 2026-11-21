@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "components/animal_card.html" import animal_card %}
+{% block title %}Zwierzęta do adopcji{% endblock %}
+
+{% block content %}
+<h1>Zwierzęta do adopcji</h1>
+{% if shelter %}
+  <p class="meta">Tylko z placówki: <strong>{{ shelter.name }}</strong>
+    · <a href="{{ url_for('animal_list') }}">pokaż wszystkie placówki</a></p>
+{% endif %}
+
+<form class="filters" method="get" action="{{ url_for('animal_list') }}">
+  {% if shelter %}<input type="hidden" name="shelter_id" value="{{ shelter.id }}">{% endif %}
+  <div class="field"><label for="text">Imię lub rasa</label>
+    <input type="search" id="text" name="text" value="{{ values.text }}"></div>
+  <div class="field"><label for="species">Gatunek</label>
+    <select id="species" name="species">
+      <option value="">Psy i koty</option>
+      {% for value, name in species_labels.items() %}
+        <option value="{{ value }}" {% if value == values.species %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select></div>
+  <div class="field"><label for="sex">Płeć</label>
+    <select id="sex" name="sex">
+      <option value="">Dowolna</option>
+      {% for value, name in sex_labels.items() if value != 'Unknown' %}
+        <option value="{{ value }}" {% if value == values.sex %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select></div>
+  <fieldset class="checks"><legend>Wielkość</legend>
+    {% for value, name in size_labels.items() %}
+      <label><input type="checkbox" name="size" value="{{ value }}" {% if value in values.sizes %}checked{% endif %}> {{ name }}</label>
+    {% endfor %}
+  </fieldset>
+  <div class="field"><label for="voivodeship">Województwo</label>
+    <select id="voivodeship" name="voivodeship">
+      <option value="">Wszystkie</option>
+      {% for v in voivodeships %}
+        <option value="{{ v }}" {% if v == values.voivodeship %}selected{% endif %}>{{ v }}</option>
+      {% endfor %}
+    </select></div>
+  <div class="field"><label for="city">Miejscowość</label>
+    <input type="search" id="city" name="city" value="{{ values.city }}"></div>
+  <div class="field"><label for="age_from">Wiek od (lat)</label>
+    <input type="number" id="age_from" name="age_from" min="0" max="50" value="{{ values.age_from }}"></div>
+  <div class="field"><label for="age_to">Wiek do (lat)</label>
+    <input type="number" id="age_to" name="age_to" min="0" max="50" value="{{ values.age_to }}"></div>
+  <div class="field"><label for="sort">Sortuj</label>
+    <select id="sort" name="sort">
+      <option value="published" {% if values.sort == 'published' %}selected{% endif %}>Najnowsze ogłoszenia</option>
+      <option value="confirmed" {% if values.sort == 'confirmed' %}selected{% endif %}>Ostatnio potwierdzone</option>
+    </select></div>
+  <label><input type="checkbox" name="in_progress" value="1" {% if values.in_progress %}checked{% endif %}>
+    Pokaż też zwierzęta w trakcie adopcji</label>
+  <button type="submit">Szukaj</button>
+  {% if url_args %}<a href="{{ url_for('animal_list', shelter_id=shelter.id if shelter else None) }}">Wyczyść filtry</a>{% endif %}
+</form>
+
+<p class="meta">Znaleziono: {{ pagination.total }}</p>
+{% if animals %}
+  <div class="animal-grid">{% for a in animals %}{{ animal_card(a) }}{% endfor %}</div>
+{% else %}
+  <p>Nie znaleziono zwierząt spełniających kryteria. Spróbuj poluzować filtry.</p>
+{% endif %}
+
+{% set p = pagination %}
+{% if p.total_pages > 1 %}
+<nav aria-label="Paginacja">
+  {% if p.has_previous %}<a href="{{ url_for('animal_list', page=p.page - 1, **url_args) }}">← Poprzednia</a>{% endif %}
+  Strona {{ p.page }} z {{ p.total_pages }}
+  {% if p.has_next %}<a href="{{ url_for('animal_list', page=p.page + 1, **url_args) }}">Następna →</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

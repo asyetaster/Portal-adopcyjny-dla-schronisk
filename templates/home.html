@@ -1,18 +1,36 @@
 {% extends "base.html" %}
+{% from "components/animal_card.html" import animal_card %}
 
 {% block title %}Portal adopcyjny{% endblock %}
 
 {% block content %}
 <section class="hero">
   <h1>Znajdź przyjaciela na całe życie</h1>
-  <p>Portal adopcyjny dla schronisk. Przeglądaj schroniska i zgłoś swoją placówkę.</p>
-  {% if g.user %}
-    <p>Witaj, {{ g.user['first_name'] }}!</p>
-    <a class="btn" href="{{ url_for('shelter_list') }}">Zobacz schroniska</a>
-  {% else %}
-    <a class="btn" href="{{ url_for('shelter_list') }}">Zobacz schroniska</a>
+  <p>Portal adopcyjny dla schronisk. Przeglądaj zwierzęta czekające na dom i zgłoś swoją placówkę.</p>
+  <form class="filters" method="get" action="{{ url_for('animal_list') }}" role="search">
+    <div class="field"><label for="home-text" style="color:#fff">Imię lub rasa</label>
+      <input type="search" id="home-text" name="text"></div>
+    <div class="field"><label for="home-species" style="color:#fff">Gatunek</label>
+      <select id="home-species" name="species">
+        <option value="">Psy i koty</option>
+        {% for value, name in species_labels.items() %}<option value="{{ value }}">{{ name }}</option>{% endfor %}
+      </select></div>
+    <button type="submit" class="btn">Szukaj</button>
+  </form>
+  {% if not g.user %}
     <a class="btn ghost" href="{{ url_for('login') }}">Zaloguj się</a>
     <a class="btn ghost" href="{{ url_for('register_form') }}">Załóż konto</a>
+  {% else %}
+    <p>Witaj, {{ g.user['first_name'] }}!</p>
   {% endif %}
 </section>
+
+<h2>Najnowsze ogłoszenia</h2>
+{% if animals %}
+  <div class="animal-grid">{% for a in animals %}{{ animal_card(a) }}{% endfor %}</div>
+  <p><a class="btn" href="{{ url_for('animal_list') }}">Zobacz wszystkie zwierzęta</a>
+     <a href="{{ url_for('shelter_list') }}">Przeglądaj schroniska</a></p>
+{% else %}
+  <p>Na razie nikt nie opublikował kart zwierząt. <a href="{{ url_for('shelter_list') }}">Zobacz schroniska</a>.</p>
+{% endif %}
 {% endblock %}
