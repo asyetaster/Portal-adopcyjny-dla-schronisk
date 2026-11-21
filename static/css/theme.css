@@ -49,3 +49,8 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 12p
 .btn-primary{--bs-btn-bg:var(--brand);--bs-btn-border-color:var(--brand);--bs-btn-hover-bg:var(--brand-dark);--bs-btn-hover-border-color:var(--brand-dark);--bs-btn-active-bg:var(--brand-dark)}
 .admin-sidebar h1,.admin-sidebar h2{color:#fff}
 @media(max-width:700px){.logo{font-size:30px}.hero{padding:50px 20px 60px}}
+
+/* ===== czytelność w trybie ciemnym: Bootstrap zostaje jasny, więc treść kart i tabel
+   dziedziczyłaby ciemny kolor na ciemnym tle ===== */
+.card{color:var(--ink)}
+.table{--bs-table-color:var(--ink);--bs-table-bg:transparent;--bs-table-border-color:var(--line);--bs-table-hover-color:var(--ink);--bs-table-hover-bg:var(--ok-bg)}
