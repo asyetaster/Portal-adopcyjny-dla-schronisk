@@ -20,6 +20,11 @@ from operations.animal.UpdateAnimalCareRequirementsCommand import (
 )
 from operations.animal.UpdateAnimalProfileCommand import UpdateAnimalProfileCommand
 from operations.animal.WithdrawAnimalProfileCommand import WithdrawAnimalProfileCommand
+from operations.animal.GetAnimalProfileQuery import GetAnimalProfileQuery
+from operations.animal.HideAnimalProfileCommand import HideAnimalProfileCommand
+from operations.animal.ListAnimalsForModerationQuery import ListAnimalsForModerationQuery
+from operations.animal.SearchAnimalsQuery import SearchAnimalsQuery
+from operations.animal.UnhideAnimalProfileCommand import UnhideAnimalProfileCommand
 from operations.errors import BusinessRuleError, NotFoundError
 from operations.shelter.ApproveShelterRegistrationCommand import (
     ApproveShelterRegistrationCommand,
@@ -395,3 +400,168 @@ def test_confirm_only_for_published_cards(app, world):
     with pytest.raises(BusinessRuleError, match="opublikowanej"):
         _run(app, ConfirmAnimalProfileAccuracyCommand, actor_id=world["manager_a"],
              shelter_id=world["shelter_a"], animal_id=animal_id)
+
+
+# --- Katalog (SearchAnimalsQuery, GetAnimalProfileQuery) ------------------
+
+def _search(app, **filters):
+    with app.app_context(), app.extensions["db_engine"].connect() as conn:
+        return SearchAnimalsQuery(conn).execute(**filters)
+
+
+def _names(result):
+    return [a["name"] for a in result["items"]]
+
+
+def _catalog(app, world):
+    """Cztery opublikowane karty w dwóch placówkach + jeden szkic."""
+    burek = _published(app, world, "Burek", size="Medium", age_min_months=24, age_max_months=36)
+    maly = _published(app, world, "Maly", size="Small", age_min_months=6, age_max_months=12)
+    mruczek = _published(app, world, "Mruczek", species="Cat", size="Small",
+                         age_min_months=48, age_max_months=60, sex="Female")
+    # Placówka B (kujawsko-pomorskie).
+    reks = _animal(app, world["manager_b"], world["shelter_b"], "Reks", size="Medium",
+                   age_min_months=30, age_max_months=40)
+    _photo(app, world["manager_b"], world["shelter_b"], reks, "reks.jpg")
+    _publish(app, world["manager_b"], world["shelter_b"], reks)
+    _animal(app, world["manager_a"], world["shelter_a"], "Szkic")
+    return {"burek": burek, "maly": maly, "mruczek": mruczek, "reks": reks}
+
+
+def test_catalog_shows_only_available_cards_by_default(app, world):  # BR-012, BR-020
+    _catalog(app, world)
+    assert sorted(_names(_search(app))) == ["Burek", "Maly", "Mruczek", "Reks"]
+
+
+def test_filters_work_together(app, world):  # AC-001, BR-016
+    ids = _catalog(app, world)
+    # Psy, kujawsko-pomorskie, średnie, wiek 2-6 lat (24-72 mies.).
+    result = _search(app, species="Dog", voivodeship="kujawsko-pomorskie", sizes="Medium",
+                     age_from_months=24, age_to_months=72)
+    assert _names(result) == ["Reks"]
+    # Ten sam zestaw bez województwa: dochodzi Burek z placówki A.
+    assert sorted(_names(_search(app, species="Dog", sizes="Medium",
+                                 age_from_months=24, age_to_months=72))) == ["Burek", "Reks"]
+    assert _names(_search(app, sex="Female")) == ["Mruczek"]
+    assert sorted(_names(_search(app, sizes="Small,Medium", species="Dog"))) == ["Burek", "Maly", "Reks"]
+    assert _names(_search(app, shelter_id=world["shelter_b"])) == ["Reks"]  # BR-017
+    assert _names(_search(app, text="mrucz")) == ["Mruczek"]
+    assert _names(_search(app, city="Bydgosz")) == ["Reks"]
+    assert ids  # fixture zwrócił ID
+
+
+def test_age_filter_uses_range_overlap(app, world):  # BR-016
+    _catalog(app, world)
+    # Burek ma 24-36 mies.: zahacza o przedział 36-48 tylko górną granicą.
+    assert "Burek" in _names(_search(app, species="Dog", age_from_months=36, age_to_months=48))
+    assert "Burek" not in _names(_search(app, species="Dog", age_from_months=37, age_to_months=48))
+    # Sama dolna granica (bez górnej) i sama górna.
+    assert "Maly" not in _names(_search(app, species="Dog", age_from_months=24))
+    assert _names(_search(app, species="Dog", age_to_months=12)) == ["Maly"]
+
+
+def test_cards_without_age_do_not_match_age_filter(app, world):
+    animal_id = _animal(app, world["manager_a"], world["shelter_a"], "Bezwiekowy",
+                        age_min_months=-1, age_max_months=-1)
+    # Bez wieku nie da się opublikować, więc wymuszamy stan w bazie wprost.
+    _photo(app, world["manager_a"], world["shelter_a"], animal_id)
+    _sql(app, """UPDATE animals SET status='Available', published_at='2026-01-01T00:00:00Z',
+                 last_confirmed_at='2026-01-01T00:00:00Z' WHERE id=:id""", id=animal_id)
+    assert "Bezwiekowy" in _names(_search(app))
+    assert "Bezwiekowy" not in _names(_search(app, age_from_months=0, age_to_months=1000))
+
+
+def test_hidden_withdrawn_and_unapproved_cards_are_not_listed(app, world):  # BR-012, R6
+    ids = _catalog(app, world)
+    _run(app, HideAnimalProfileCommand, actor_id=world["admin"], animal_id=ids["burek"], reason="Skarga")
+    _run(app, WithdrawAnimalProfileCommand, actor_id=world["manager_a"],
+         shelter_id=world["shelter_a"], animal_id=ids["maly"], reason="Adopcja poza portalem")
+    assert sorted(_names(_search(app))) == ["Mruczek", "Reks"]
+    # Zablokowana placówka znika z katalogu razem z kartami (D13), bez zmiany ich statusu.
+    _run(app, BlockShelterCommand, actor_id=world["admin"], shelter_id=world["shelter_b"], reason="X")
+    assert _names(_search(app)) == ["Mruczek"]
+    assert _row(app, ids["reks"])["status"] == "Available"
+
+
+def test_unhide_restores_card(app, world):
+    ids = _catalog(app, world)
+    _run(app, HideAnimalProfileCommand, actor_id=world["admin"], animal_id=ids["burek"], reason="Skarga")
+    with pytest.raises(BusinessRuleError, match="już ukryta"):
+        _run(app, HideAnimalProfileCommand, actor_id=world["admin"], animal_id=ids["burek"], reason="Jeszcze raz")
+    _run(app, UnhideAnimalProfileCommand, actor_id=world["admin"], animal_id=ids["burek"])
+    assert "Burek" in _names(_search(app))
+    with pytest.raises(BusinessRuleError, match="nie jest ukryta"):
+        _run(app, UnhideAnimalProfileCommand, actor_id=world["admin"], animal_id=ids["burek"])
+
+
+def test_hide_requires_reason_and_leaves_status(app, world):
+    animal_id = _published(app, world)
+    with pytest.raises(BusinessRuleError, match="powód"):
+        _run(app, HideAnimalProfileCommand, actor_id=world["admin"], animal_id=animal_id, reason=" ")
+    _run(app, HideAnimalProfileCommand, actor_id=world["admin"], animal_id=animal_id, reason="Skarga")
+    row = _row(app, animal_id)
+    assert (row["status"], row["is_hidden"], row["hidden_by"]) == ("Available", 1, world["admin"])
+    with pytest.raises(NotFoundError):
+        _run(app, HideAnimalProfileCommand, actor_id=world["admin"], animal_id=9999, reason="x")
+
+
+def test_in_progress_cards_only_with_flag(app, world):  # BR-020
+    ids = _catalog(app, world)
+    _sql(app, "UPDATE animals SET status = 'AdoptionInProgress' WHERE id = :id", id=ids["burek"])
+    assert "Burek" not in _names(_search(app))
+    assert "Burek" in _names(_search(app, include_in_progress=True))
+
+
+def test_sorting_by_publication_and_confirmation(app, world):  # BR-019
+    ids = _catalog(app, world)
+    _sql(app, "UPDATE animals SET published_at = '2026-03-01T00:00:00Z', last_confirmed_at = '2026-05-01T00:00:00Z' WHERE id = :id", id=ids["burek"])
+    _sql(app, "UPDATE animals SET published_at = '2026-04-01T00:00:00Z', last_confirmed_at = '2026-02-01T00:00:00Z' WHERE id = :id", id=ids["maly"])
+    _sql(app, "UPDATE animals SET published_at = '2026-01-01T00:00:00Z', last_confirmed_at = '2026-01-01T00:00:00Z' WHERE id IN (:a, :b)", a=ids["mruczek"], b=ids["reks"])
+    by_published = _names(_search(app, sort="published"))
+    by_confirmed = _names(_search(app, sort="confirmed"))
+    assert by_published[:2] == ["Maly", "Burek"]
+    assert by_confirmed[:2] == ["Burek", "Maly"]
+
+
+def test_needs_confirmation_after_30_days_and_confirm_clears_it(app, world):  # AC-016, AC-017
+    animal_id = _published(app, world)
+    assert _search(app)["items"][0]["needs_confirmation"] == 0
+    _sql(app, "UPDATE animals SET last_confirmed_at = strftime('%Y-%m-%dT%H:%M:%SZ','now','-31 days') WHERE id = :id", id=animal_id)
+    assert _search(app)["items"][0]["needs_confirmation"] == 1
+    # Karta zostaje w katalogu (BR-045), tylko z ostrzeżeniem.
+    with app.app_context(), app.extensions["db_engine"].connect() as conn:
+        assert GetAnimalProfileQuery(conn).execute(animal_id)["needs_confirmation"] == 1
+
+    _run(app, ConfirmAnimalProfileAccuracyCommand, actor_id=world["manager_a"],
+         shelter_id=world["shelter_a"], animal_id=animal_id)
+    assert _search(app)["items"][0]["needs_confirmation"] == 0
+
+
+def test_public_profile_has_details_and_no_hidden_cards(app, world):  # AC-003
+    animal_id = _published(app, world)
+    _run(app, UpdateAnimalCareRequirementsCommand, actor_id=world["manager_a"],
+         shelter_id=world["shelter_a"], animal_id=animal_id, good_with_children="Yes",
+         good_with_dogs="Unknown", good_with_cats="No", special_care_required="No")
+    with app.app_context(), app.extensions["db_engine"].connect() as conn:
+        animal = GetAnimalProfileQuery(conn).execute(animal_id)
+        assert animal["shelter_name"] == "Schronisko A"
+        assert animal["temperament_tags"] == ["łagodny", "towarzyski"]
+        assert animal["requirements"]["good_with_dogs"] == "Unknown"
+        assert len(animal["photos"]) == 1 and animal["photos"][0]["is_main"] == 1
+        assert "contact_name" not in animal and "submitted_by" not in animal
+    _run(app, HideAnimalProfileCommand, actor_id=world["admin"], animal_id=animal_id, reason="x")
+    with app.app_context(), app.extensions["db_engine"].connect() as conn:
+        assert GetAnimalProfileQuery(conn).execute(animal_id) is None
+        assert GetAnimalProfileQuery(conn).execute(9999) is None
+
+
+def test_moderation_list_shows_all_shelters_and_hidden_first(app, world):
+    ids = _catalog(app, world)
+    _run(app, HideAnimalProfileCommand, actor_id=world["admin"], animal_id=ids["reks"], reason="x")
+    with app.app_context(), app.extensions["db_engine"].connect() as conn:
+        query = ListAnimalsForModerationQuery(conn)
+        result = query.execute()
+        assert result["items"][0]["name"] == "Reks"
+        assert result["pagination"]["total"] == 5  # z szkicem
+        assert [a["name"] for a in query.execute(hidden_only=True)["items"]] == ["Reks"]
+        assert [a["name"] for a in query.execute(search="Schronisko B")["items"]] == ["Reks"]
