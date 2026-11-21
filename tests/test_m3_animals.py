@@ -3,11 +3,15 @@
 import pytest
 from sqlalchemy import text
 
+from operations.animal.AddAnimalPhotoCommand import AddAnimalPhotoCommand
+
 from operations.animal.CreateAnimalProfileCommand import CreateAnimalProfileCommand
 from operations.animal.GetAnimalProfileForManagementQuery import (
     GetAnimalProfileForManagementQuery,
 )
 from operations.animal.ListShelterAnimalsQuery import ListShelterAnimalsQuery
+from operations.animal.RemoveAnimalPhotoCommand import RemoveAnimalPhotoCommand
+from operations.animal.SetMainAnimalPhotoCommand import SetMainAnimalPhotoCommand
 from operations.animal.UpdateAnimalCareRequirementsCommand import (
     UpdateAnimalCareRequirementsCommand,
 )
@@ -86,6 +90,13 @@ def _animal(app, actor, shelter_id, name="Burek", species="Dog", **profile):
     )
     return animal_id
 
+def _photo(app, actor, shelter_id, animal_id, name="a.jpg"):
+    return _run(app, AddAnimalPhotoCommand, actor_id=actor, shelter_id=shelter_id,
+                animal_id=animal_id, file_path=f"uploads/animals/{name}", alt_text="Zdjęcie")
+
+
+def _photos(app, animal_id):
+    return _sql(app, "SELECT * FROM animal_photos WHERE animal_id = :id ORDER BY position", id=animal_id)
 
 def _row(app, animal_id):
     return _sql(app, "SELECT * FROM animals WHERE id = :id", id=animal_id)[0]
@@ -223,3 +234,54 @@ def test_shelter_list_includes_drafts_and_filters(app, world):
         assert [a["name"] for a in query.execute(sid, species="Cat")["items"]] == ["Mruczek"]
         assert query.execute(sid, text="bur")["pagination"]["total"] == 1
         assert query.execute(sid, status="Available")["items"] == []
+
+
+
+# --- Zdjęcia -------------------------------------------------------------
+
+def test_first_photo_is_main_and_main_can_change(app, world):
+    actor, sid = world["manager_a"], world["shelter_a"]
+    animal_id = _animal(app, actor, sid)
+    first = _photo(app, actor, sid, animal_id, "1.jpg")
+    second = _photo(app, actor, sid, animal_id, "2.jpg")
+    assert [(p["id"], p["is_main"], p["position"]) for p in _photos(app, animal_id)] == [
+        (first, 1, 0), (second, 0, 1)]
+
+    _run(app, SetMainAnimalPhotoCommand, shelter_id=sid, animal_id=animal_id, photo_id=second)
+    assert [p["is_main"] for p in _photos(app, animal_id)] == [0, 1]
+
+
+def test_removing_main_photo_promotes_next(app, world):
+    actor, sid = world["manager_a"], world["shelter_a"]
+    animal_id = _animal(app, actor, sid)
+    first = _photo(app, actor, sid, animal_id, "1.jpg")
+    _photo(app, actor, sid, animal_id, "2.jpg")
+
+    path = _run(app, RemoveAnimalPhotoCommand, shelter_id=sid, animal_id=animal_id, photo_id=first)
+    assert path == "uploads/animals/1.jpg"  # route usunie plik
+    remaining = _photos(app, animal_id)
+    assert [(p["file_path"], p["is_main"]) for p in remaining] == [("uploads/animals/2.jpg", 1)]
+
+
+def test_photo_operations_are_scoped_to_shelter(app, world):
+    animal_a = _animal(app, world["manager_a"], world["shelter_a"])
+    photo = _photo(app, world["manager_a"], world["shelter_a"], animal_a)
+    # Placówka B zna ID zdjęcia i karty A, ale nie ma do nich dostępu.
+    for cls, kwargs in (
+        (RemoveAnimalPhotoCommand, {"photo_id": photo}),
+        (SetMainAnimalPhotoCommand, {"photo_id": photo}),
+    ):
+        with pytest.raises(NotFoundError):
+            _run(app, cls, shelter_id=world["shelter_b"], animal_id=animal_a, **kwargs)
+    with pytest.raises(NotFoundError):
+        _run(app, AddAnimalPhotoCommand, actor_id=world["manager_b"], shelter_id=world["shelter_b"],
+             animal_id=animal_a, file_path="uploads/animals/x.jpg")
+    assert len(_photos(app, animal_a)) == 1
+
+
+def test_photo_from_other_animal_is_not_found(app, world):
+    actor, sid = world["manager_a"], world["shelter_a"]
+    one, two = _animal(app, actor, sid, "Jeden"), _animal(app, actor, sid, "Dwa")
+    photo_of_two = _photo(app, actor, sid, two)
+    with pytest.raises(NotFoundError):
+        _run(app, SetMainAnimalPhotoCommand, shelter_id=sid, animal_id=one, photo_id=photo_of_two)
