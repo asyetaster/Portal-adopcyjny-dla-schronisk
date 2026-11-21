@@ -4,18 +4,22 @@ import pytest
 from sqlalchemy import text
 
 from operations.animal.AddAnimalPhotoCommand import AddAnimalPhotoCommand
-
+from operations.animal.ConfirmAnimalProfileAccuracyCommand import (
+    ConfirmAnimalProfileAccuracyCommand,
+)
 from operations.animal.CreateAnimalProfileCommand import CreateAnimalProfileCommand
 from operations.animal.GetAnimalProfileForManagementQuery import (
     GetAnimalProfileForManagementQuery,
 )
 from operations.animal.ListShelterAnimalsQuery import ListShelterAnimalsQuery
+from operations.animal.PublishAnimalProfileCommand import PublishAnimalProfileCommand
 from operations.animal.RemoveAnimalPhotoCommand import RemoveAnimalPhotoCommand
 from operations.animal.SetMainAnimalPhotoCommand import SetMainAnimalPhotoCommand
 from operations.animal.UpdateAnimalCareRequirementsCommand import (
     UpdateAnimalCareRequirementsCommand,
 )
 from operations.animal.UpdateAnimalProfileCommand import UpdateAnimalProfileCommand
+from operations.animal.WithdrawAnimalProfileCommand import WithdrawAnimalProfileCommand
 from operations.errors import BusinessRuleError, NotFoundError
 from operations.shelter.ApproveShelterRegistrationCommand import (
     ApproveShelterRegistrationCommand,
@@ -285,3 +289,109 @@ def test_photo_from_other_animal_is_not_found(app, world):
     photo_of_two = _photo(app, actor, sid, two)
     with pytest.raises(NotFoundError):
         _run(app, SetMainAnimalPhotoCommand, shelter_id=sid, animal_id=one, photo_id=photo_of_two)
+
+
+# --- Publikacja, wycofanie, aktualność ----------------------------------
+
+def _publish(app, actor, sid, animal_id):
+    _run(app, PublishAnimalProfileCommand, actor_id=actor, shelter_id=sid, animal_id=animal_id)
+
+
+def _published(app, world, name="Burek", **profile):
+    animal_id = _animal(app, world["manager_a"], world["shelter_a"], name, **profile)
+    _photo(app, world["manager_a"], world["shelter_a"], animal_id, f"{name}.jpg")
+    _publish(app, world["manager_a"], world["shelter_a"], animal_id)
+    return animal_id
+
+
+def test_unapproved_shelter_has_draft_but_cannot_publish(app, world):  # AC-004
+    actor, sid = world["manager_c"], world["shelter_c"]
+    animal_id = _animal(app, actor, sid)
+    _photo(app, actor, sid, animal_id)
+    with pytest.raises(BusinessRuleError, match="zatwierdzeniu placówki"):
+        _publish(app, actor, sid, animal_id)
+    assert _row(app, animal_id)["status"] == "Draft"
+
+
+def test_publish_requires_complete_profile_and_photo(app, world):  # BR-008
+    actor, sid = world["manager_a"], world["shelter_a"]
+    animal_id = _animal(app, actor, sid)
+    with pytest.raises(BusinessRuleError, match="co najmniej jedno zdjęcie"):
+        _publish(app, actor, sid, animal_id)
+
+    empty = _run(app, CreateAnimalProfileCommand, actor_id=actor, shelter_id=sid,
+                 name="Pusty", species="Cat")
+    _photo(app, actor, sid, empty)
+    with pytest.raises(BusinessRuleError, match="opis charakteru.*wielkość"):
+        _publish(app, actor, sid, empty)
+
+
+def test_publish_sets_dates_and_cannot_repeat(app, world):
+    animal_id = _published(app, world)
+    row = _row(app, animal_id)
+    assert row["status"] == "Available"
+    assert row["published_at"] and row["last_confirmed_at"]
+    assert row["last_confirmed_by"] == world["manager_a"]
+    with pytest.raises(BusinessRuleError, match="obecnym statusie"):
+        _publish(app, world["manager_a"], world["shelter_a"], animal_id)
+
+
+def test_cannot_remove_last_photo_of_published_card(app, world):  # BR-008
+    animal_id = _published(app, world)
+    (photo,) = _photos(app, animal_id)
+    with pytest.raises(BusinessRuleError, match="co najmniej jedno zdjęcie"):
+        _run(app, RemoveAnimalPhotoCommand, shelter_id=world["shelter_a"],
+             animal_id=animal_id, photo_id=photo["id"])
+    # Po dodaniu drugiego zdjęcia usunięcie pierwszego jest już dozwolone.
+    _photo(app, world["manager_a"], world["shelter_a"], animal_id, "drugie.jpg")
+    _run(app, RemoveAnimalPhotoCommand, shelter_id=world["shelter_a"],
+         animal_id=animal_id, photo_id=photo["id"])
+    assert len(_photos(app, animal_id)) == 1
+
+
+def test_withdraw_requires_reason_and_disables_donations(app, world):
+    animal_id = _published(app, world)
+    _sql(app, "UPDATE animals SET donations_enabled = 1 WHERE id = :id", id=animal_id)
+    args = dict(actor_id=world["manager_a"], shelter_id=world["shelter_a"], animal_id=animal_id)
+    with pytest.raises(BusinessRuleError, match="powód"):
+        _run(app, WithdrawAnimalProfileCommand, reason="  ", **args)
+
+    _run(app, WithdrawAnimalProfileCommand, reason="Pies wrócił do właściciela.", **args)
+    row = _row(app, animal_id)
+    assert (row["status"], row["donations_enabled"]) == ("Withdrawn", 0)
+    assert row["withdrawn_reason"] == "Pies wrócił do właściciela."
+    with pytest.raises(BusinessRuleError, match="tylko opublikowaną"):
+        _run(app, WithdrawAnimalProfileCommand, reason="Jeszcze raz", **args)
+
+
+def test_withdrawn_card_can_be_republished(app, world):
+    animal_id = _published(app, world)
+    args = dict(actor_id=world["manager_a"], shelter_id=world["shelter_a"], animal_id=animal_id)
+    _run(app, WithdrawAnimalProfileCommand, reason="Pomyłka", **args)
+    _publish(app, world["manager_a"], world["shelter_a"], animal_id)
+    row = _row(app, animal_id)
+    assert (row["status"], row["withdrawn_reason"]) == ("Available", None)
+
+
+def test_confirm_saves_person_and_can_correct_age(app, world):  # AC-017, D8
+    animal_id = _published(app, world)
+    _sql(app, """UPDATE animals SET last_confirmed_at = '2026-01-01T00:00:00Z',
+                 last_confirmed_by = :admin WHERE id = :id""", id=animal_id, admin=world["admin"])
+    args = dict(actor_id=world["manager_a"], shelter_id=world["shelter_a"], animal_id=animal_id)
+
+    _run(app, ConfirmAnimalProfileAccuracyCommand, **args)  # bez korekty wieku
+    row = _row(app, animal_id)
+    assert row["last_confirmed_at"] > "2026-01-01T00:00:00Z"
+    assert row["last_confirmed_by"] == world["manager_a"]
+    assert (row["age_min_months"], row["age_max_months"]) == (24, 36)
+
+    _run(app, ConfirmAnimalProfileAccuracyCommand, age_min_months=30, age_max_months=42, **args)
+    row = _row(app, animal_id)
+    assert (row["age_min_months"], row["age_max_months"]) == (30, 42)
+
+
+def test_confirm_only_for_published_cards(app, world):
+    animal_id = _animal(app, world["manager_a"], world["shelter_a"])
+    with pytest.raises(BusinessRuleError, match="opublikowanej"):
+        _run(app, ConfirmAnimalProfileAccuracyCommand, actor_id=world["manager_a"],
+             shelter_id=world["shelter_a"], animal_id=animal_id)
