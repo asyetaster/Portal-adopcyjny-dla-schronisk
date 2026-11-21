@@ -85,5 +85,84 @@
     <p class="text-secondary mb-0">Nie uzupełniono. Kandydaci zobaczą „brak danych”.</p>
   {% endif %}
 </div></div>
-{# Zdjęcia i akcje (publikacja, wycofanie, potwierdzenie) dochodzą w następnym commicie. #}
+
+<div class="card mb-4"><div class="card-body">
+  <h2 class="h6 mb-3">Zdjęcia ({{ animal.photos|length }})</h2>
+  <div class="row g-3 mb-3">
+    {% for photo in animal.photos %}
+    <div class="col-6 col-md-3">
+      <div class="border rounded p-2 h-100">
+        <img src="{{ url_for('static', filename=photo.file_path) }}" alt="{{ photo.alt_text or animal.name }}"
+             class="img-fluid rounded mb-2" style="aspect-ratio:1;object-fit:cover;width:100%">
+        {% if photo.is_main %}
+          <span class="badge text-bg-success">Główne</span>
+        {% elif can_edit %}
+          <form method="post" class="d-inline" action="{{ url_for('panel_animal_photo_main', shelter_id=sid, animal_id=animal.id, photo_id=photo.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-outline-primary">Ustaw jako główne</button>
+          </form>
+        {% endif %}
+        {% if can_edit %}
+          <form method="post" class="d-inline" action="{{ url_for('panel_animal_photo_remove', shelter_id=sid, animal_id=animal.id, photo_id=photo.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger">Usuń</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+      <p class="text-secondary mb-0">Brak zdjęć. Karta bez zdjęcia nie może zostać opublikowana.</p>
+    {% endfor %}
+  </div>
+  {% if can_edit %}
+  <form method="post" enctype="multipart/form-data" class="row g-2 align-items-end"
+        action="{{ url_for('panel_animal_photo_add', shelter_id=sid, animal_id=animal.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="col-md-5">
+      <label for="photo" class="form-label">Nowe zdjęcie (JPG, PNG, WebP, do 5 MB)</label>
+      <input type="file" id="photo" name="photo" class="form-control" accept="image/jpeg,image/png,image/webp" required>
+    </div>
+    <div class="col-md-5">
+      <label for="alt_text" class="form-label">Opis zdjęcia (dla czytników ekranu)</label>
+      <input type="text" id="alt_text" name="alt_text" class="form-control" maxlength="200">
+    </div>
+    <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Dodaj</button></div>
+  </form>
+  {% endif %}
+</div></div>
+
+{% if can_edit %}
+<div class="row g-3 mb-4">
+  {% if animal.status == 'Draft' or animal.status == 'Withdrawn' %}
+  <div class="col-md-6"><div class="card border-success h-100"><div class="card-body">
+    <h2 class="h6 mb-3">Publikacja</h2>
+    <form method="post" action="{{ url_for('panel_animal_publish', shelter_id=sid, animal_id=animal.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-success"><i class="bi bi-megaphone me-1"></i> Opublikuj kartę</button>
+    </form>
+    <div class="form-text mt-2">Wymaga zatwierdzonej placówki, kompletnych danych i zdjęcia.</div>
+  </div></div></div>
+  {% endif %}
+  {% if animal.status == 'Available' or animal.status == 'AdoptionInProgress' %}
+  <div class="col-md-6"><div class="card border-primary h-100"><div class="card-body">
+    <h2 class="h6 mb-3">Potwierdź aktualność</h2>
+    <form method="post" action="{{ url_for('panel_animal_confirm', shelter_id=sid, animal_id=animal.id) }}" class="row g-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="col-6"><input type="number" name="age_min_months" class="form-control" min="0" max="600" placeholder="Wiek od (mies.)" aria-label="Wiek od w miesiącach"></div>
+      <div class="col-6"><input type="number" name="age_max_months" class="form-control" min="0" max="600" placeholder="Wiek do (mies.)" aria-label="Wiek do w miesiącach"></div>
+      <div class="col-12"><button type="submit" class="btn btn-primary"><i class="bi bi-check2-circle me-1"></i> Dane są aktualne</button></div>
+    </form>
+    <div class="form-text mt-2">Pola wieku wypełnij tylko, jeśli chcesz go poprawić.</div>
+  </div></div></div>
+  <div class="col-md-6"><div class="card border-danger h-100"><div class="card-body">
+    <h2 class="h6 mb-3">Wycofaj kartę</h2>
+    <form method="post" action="{{ url_for('panel_animal_withdraw', shelter_id=sid, animal_id=animal.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <textarea name="reason" class="form-control mb-2" rows="2" placeholder="Powód wycofania" required></textarea>
+      <button type="submit" class="btn btn-danger">Wycofaj z katalogu</button>
+    </form>
+  </div></div></div>
+  {% endif %}
+</div>
+{% endif %}
 {% endblock %}

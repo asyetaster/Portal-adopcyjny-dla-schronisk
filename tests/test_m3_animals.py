@@ -663,3 +663,121 @@ def test_format_age_in_polish():
     assert format_age(60, 60) == "5 lat"
     assert format_age(144, 144) == "12 lat"  # nie „12 lata”
     assert format_age(18, 30) == "1 rok 6 mies. – 2 lata 6 mies."
+
+
+# --- Trasy panelu: zdjęcia, publikacja, wycofanie, potwierdzenie ---------
+
+PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+
+
+def _upload(client, sid, animal_id, data=PNG, filename="foto.png"):
+    import io
+    return client.post(
+        _panel(sid, f"/{animal_id}/photos"),
+        data={"photo": (io.BytesIO(data), filename), "alt_text": "Pies na trawie"},
+        content_type="multipart/form-data",
+    )
+
+
+def test_panel_photo_upload_validation_and_cleanup(app, client, world):
+    from pathlib import Path
+
+    sid = world["shelter_a"]
+    animal_id = _animal(app, world["manager_a"], sid)
+    _login(client, "a@example.com")
+    uploads = Path(app.static_folder) / "uploads" / "animals"
+
+    assert _upload(client, sid, animal_id, data=b"to nie jest obraz", filename="x.png").status_code == 303
+    assert _photos(app, animal_id) == []  # odrzucone po sygnaturze, nie po rozszerzeniu
+    assert _upload(client, sid, animal_id, data=PNG + b"0" * (5 * 1024 * 1024)).status_code == 303
+    assert _photos(app, animal_id) == []
+
+    assert _upload(client, sid, animal_id).status_code == 303
+    (photo,) = _photos(app, animal_id)
+    assert photo["is_main"] == 1 and photo["alt_text"] == "Pies na trawie"
+    stored = Path(app.static_folder) / photo["file_path"]
+    assert stored.parent == uploads and stored.read_bytes().startswith(b"\x89PNG")
+    assert client.get(f"/static/{photo['file_path']}").status_code == 200
+
+    # Karta cudzej placówki: operacja odmawia, a plik nie zostaje na dysku.
+    other = _animal(app, world["manager_b"], world["shelter_b"], "Cudzy")
+    before = set(uploads.iterdir())
+    assert _upload(client, sid, other).status_code == 404
+    assert set(uploads.iterdir()) == before
+
+    client.post(_panel(sid, f"/{animal_id}/photos/{photo['id']}/remove"))
+    assert _photos(app, animal_id) == [] and not stored.exists()
+
+
+def test_removing_demo_photo_does_not_delete_static_files(app, client, world):
+    from pathlib import Path
+
+    sid = world["shelter_a"]
+    animal_id = _animal(app, world["manager_a"], sid)
+    demo = Path(app.static_folder) / "img" / "keep-me.txt"
+    demo.parent.mkdir(parents=True, exist_ok=True)
+    demo.write_text("x")
+    try:
+        photo = _run(app, AddAnimalPhotoCommand, actor_id=world["manager_a"], shelter_id=sid,
+                     animal_id=animal_id, file_path="img/keep-me.txt")
+        _login(client, "a@example.com")
+        client.post(_panel(sid, f"/{animal_id}/photos/{photo}/remove"))
+        assert demo.exists()
+    finally:
+        demo.unlink(missing_ok=True)
+
+
+def test_panel_publish_flow_and_visibility_in_catalog_queries(app, client, world):
+    sid = world["shelter_a"]
+    _login(client, "a@example.com")
+    animal_id = _animal(app, world["manager_a"], sid, "Fafik")
+
+    client.post(_panel(sid, f"/{animal_id}/publish"))  # brak zdjęcia → flash, bez zmiany
+    assert _row(app, animal_id)["status"] == "Draft"
+
+    _upload(client, sid, animal_id)
+    resp = client.post(_panel(sid, f"/{animal_id}/publish"))
+    assert resp.status_code == 303
+    assert _row(app, animal_id)["status"] == "Available"
+    assert _names(_search(app)) == ["Fafik"]
+
+    resp = client.post(_panel(sid, f"/{animal_id}/withdraw"), data={"reason": ""})
+    assert _row(app, animal_id)["status"] == "Available"  # powód wymagany
+    client.post(_panel(sid, f"/{animal_id}/withdraw"), data={"reason": "Wrócił do domu"})
+    assert _row(app, animal_id)["status"] == "Withdrawn"
+    assert _search(app)["items"] == []
+    assert "Wrócił do domu" in client.get(_panel(sid, f"/{animal_id}")).get_data(as_text=True)
+
+
+def test_panel_confirm_clears_warning(app, client, world):  # AC-016, AC-017
+    animal_id = _published(app, world)
+    _sql(app, "UPDATE animals SET last_confirmed_at = strftime('%Y-%m-%dT%H:%M:%SZ','now','-45 days') WHERE id = :id", id=animal_id)
+    _login(client, "a@example.com")
+    sid = world["shelter_a"]
+    assert "Dostępność wymaga potwierdzenia" in client.get(_panel(sid, f"/{animal_id}")).get_data(as_text=True)
+
+    resp = client.post(_panel(sid, f"/{animal_id}/confirm"), data={"age_min_months": "30", "age_max_months": ""})
+    assert resp.status_code == 303
+    assert "Dostępność wymaga potwierdzenia" not in client.get(_panel(sid, f"/{animal_id}")).get_data(as_text=True)
+    row = _row(app, animal_id)
+    assert row["last_confirmed_by"] == world["manager_a"]
+    assert (row["age_min_months"], row["age_max_months"]) == (30, 30)
+
+
+def test_panel_actions_on_other_shelters_card_are_denied(app, client, world):  # AC-005
+    animal_a = _published(app, world)  # karta w placówce A
+    _login(client, "b@example.com")
+    sid_a, sid_b = world["shelter_a"], world["shelter_b"]
+
+    # Własna placówka B, ale ID karty z A: 404 dla każdej akcji.
+    for action in ("publish", "withdraw", "confirm"):
+        resp = client.post(_panel(sid_b, f"/{animal_a}/{action}"), data={"reason": "x"})
+        assert resp.status_code == 404, action
+    assert _upload(client, sid_b, animal_a).status_code == 404
+    # Ścieżka placówki A: 403, zanim cokolwiek się wykona.
+    for action in ("publish", "withdraw", "confirm"):
+        resp = client.post(_panel(sid_a, f"/{animal_a}/{action}"), data={"reason": "x"})
+        assert resp.status_code == 403, action
+
+    row = _row(app, animal_a)
+    assert row["status"] == "Available" and len(_photos(app, animal_a)) == 1
