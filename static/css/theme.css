@@ -76,3 +76,11 @@ form.filters{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;max-
 .gallery .thumbs img{width:84px;height:84px;object-fit:cover;border-radius:14px;display:block}
 dl.facts{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:0}
 dl.facts dt{color:var(--muted);font-weight:600}dl.facts dd{margin:0}
+
+/* filtry katalogu: równe wysokości pól, żeby etykiety leżały w jednej linii */
+.filters input:not([type=checkbox]),.filters select{height:48px;box-sizing:border-box}
+.filters .checks label,.filters>label{display:inline-flex;align-items:center;gap:6px;height:48px}
+.filters legend{margin-bottom:4px}
+.filters button{display:inline-flex;align-items:center;height:48px;padding-top:0;padding-bottom:0}
+.filters>a{display:inline-flex;align-items:center;height:48px}
+@media (max-width:600px){.filters .field,.filters fieldset{flex:1 1 100%}}
