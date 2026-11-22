@@ -12,6 +12,7 @@
   <a class="logo" href="{{ url_for('home') }}">Łapa <span>w</span> łapę</a>
   <nav class="site-nav">
     <a href="{{ url_for('home') }}">Strona główna</a>
+    <a href="{{ url_for('animal_list') }}">Zwierzęta</a>
     <a href="{{ url_for('shelter_list') }}">Schroniska</a>
     {% if g.user %}
       <a href="{{ url_for('account_profile') }}">Mój profil</a>

@@ -33,6 +33,17 @@
       {% endif %}
     </div></div>
   </div>
+  <div class="col-md-4">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-secondary small">Karty zwierząt</div>
+      <div class="fs-5 fw-semibold">{{ shelter.animal_count }}</div>
+      <div class="small">do adopcji: {{ shelter.available_animal_count }}</div>
+      {% if shelter.needs_confirmation_count %}
+        <div class="small text-warning-emphasis">do potwierdzenia: {{ shelter.needs_confirmation_count }}</div>
+      {% endif %}
+      <a href="{{ url_for('panel_animal_list', shelter_id=shelter.id) }}">Zarządzaj kartami →</a>
+    </div></div>
+  </div>
 </div>
-{# Moduły: karty zwierząt (M3), zgłoszenia (M5), wolontariat (M6), spacery (M7), wpłaty (M8). #}
+{# Moduły: zgłoszenia (M5), wolontariat (M6), spacery (M7), wpłaty (M8). #}
 {% endblock %}

@@ -1,0 +1,94 @@
+{% extends "panel/base.html" %}
+{% from "_pagination.html" import pagination as pagination_nav %}
+{% from "components/status_badge.html" import status_badge %}
+{% block title %}Karty zwierząt{% endblock %}
+
+{% block content %}
+{% set sid = g.shelter['id'] %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h1 class="h4 mb-0">Karty zwierząt</h1>
+  {% if g.shelter['status'] != 'Blocked' %}
+    <a href="{{ url_for('panel_animal_new', shelter_id=sid) }}" class="btn btn-primary">
+      <i class="bi bi-plus-lg me-1"></i> Nowa karta
+    </a>
+  {% endif %}
+</div>
+
+<form method="get" action="{{ url_for('panel_animal_list', shelter_id=sid) }}" class="row g-2 mb-3">
+  <div class="col-md-4">
+    <input type="search" name="text" value="{{ text }}" class="form-control"
+           placeholder="Imię lub rasa" aria-label="Szukaj">
+  </div>
+  <div class="col-md-2">
+    <select name="status" class="form-select" aria-label="Status">
+      <option value="">Wszystkie statusy</option>
+      {% for value, name in status_labels.items() %}
+        <option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="species" class="form-select" aria-label="Gatunek">
+      <option value="">Psy i koty</option>
+      {% for value, name in species_labels.items() %}
+        <option value="{{ value }}" {% if value == species %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="sort" class="form-select" aria-label="Sortowanie">
+      <option value="updated" {% if sort == 'updated' %}selected{% endif %}>Ostatnio zmieniane</option>
+      <option value="name" {% if sort == 'name' %}selected{% endif %}>Po imieniu</option>
+      <option value="confirmed" {% if sort == 'confirmed' %}selected{% endif %}>Najdawniej potwierdzone</option>
+    </select>
+  </div>
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search me-1"></i> Filtruj</button>
+  </div>
+</form>
+
+<div class="card"><div class="card-body">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr><th></th><th>Imię</th><th>Gatunek</th><th>Wiek</th><th>Status</th><th>Aktualność</th><th>Zmieniono (UTC)</th></tr>
+      </thead>
+      <tbody>
+        {% for a in animals %}
+        <tr>
+          <td style="width:56px">
+            {% if a.photo_path %}
+              <img src="{{ url_for('static', filename=a.photo_path) }}" alt="" width="48" height="48"
+                   style="object-fit:cover;border-radius:8px">
+            {% endif %}
+          </td>
+          <td>
+            <a href="{{ url_for('panel_animal_details', shelter_id=sid, animal_id=a.id) }}"
+               class="fw-semibold text-decoration-none">{{ a.name }}</a>
+            {% if a.breed %}<div class="small text-secondary">{{ a.breed }}</div>{% endif %}
+          </td>
+          <td>{{ a.species|label("species") }}</td>
+          <td>{{ a.age_min_months|age(a.age_max_months) }}</td>
+          <td>
+            {{ status_badge(a.status, "animal") }}
+            {% if a.is_hidden %}<span class="badge text-bg-danger">Ukryta przez administratora</span>{% endif %}
+          </td>
+          <td>
+            {% if a.needs_confirmation %}
+              <span class="badge text-bg-warning">Wymaga potwierdzenia</span>
+            {% elif a.last_confirmed_at %}
+              <small class="text-secondary">{{ a.last_confirmed_at[:10] }}</small>
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ a.updated_at }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-secondary py-4">Brak kart. Utwórz pierwszą.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination_nav(pagination, "panel_animal_list", shelter_id=sid, text=text or None,
+                    status=status or None, species=species or None, sort=sort) }}
+</div></div>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "admin/base.html" %}
+{% from "_pagination.html" import pagination as pagination_nav %}
+{% from "components/status_badge.html" import status_badge %}
+{% block title %}Karty zwierząt{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <h1 class="h4 mb-1">Karty zwierząt</h1>
+  <p class="text-secondary mb-0">Moderacja: ukrycie usuwa kartę z katalogu, ale placówka dalej ją widzi i edytuje.</p>
+</div>
+
+<form method="get" action="{{ url_for('admin_animal_list') }}" class="row g-2 mb-3">
+  <div class="col-md-6">
+    <input type="search" name="search" value="{{ search }}" class="form-control"
+           placeholder="Imię zwierzęcia lub nazwa placówki" aria-label="Szukaj">
+  </div>
+  <div class="col-md-3 d-flex align-items-center">
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="hidden" name="hidden" value="1" {% if hidden_only %}checked{% endif %}>
+      <label class="form-check-label" for="hidden">Tylko ukryte</label>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search me-1"></i> Filtruj</button>
+  </div>
+</form>
+
+<div class="card"><div class="card-body">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead><tr><th>Zwierzę</th><th>Placówka</th><th>Status</th><th>Moderacja</th></tr></thead>
+      <tbody>
+        {% for a in animals %}
+        <tr>
+          <td>
+            {{ a.name }} <small class="text-secondary">#{{ a.id }}, {{ a.species|label("species") }}</small>
+            {% if a.status in ('Available', 'AdoptionInProgress') and not a.is_hidden %}
+              <div><a href="{{ url_for('animal_details', animal_id=a.id) }}" class="small">Podgląd publiczny</a></div>
+            {% endif %}
+          </td>
+          <td><a href="{{ url_for('admin_shelter_details', shelter_id=a.shelter_id) }}">{{ a.shelter_name }}</a></td>
+          <td>{{ status_badge(a.status, "animal") }}</td>
+          <td style="min-width:280px">
+            {% if a.is_hidden %}
+              <div class="small mb-2"><span class="badge text-bg-danger">Ukryta</span> {{ a.hidden_reason }} <span class="text-secondary">({{ a.hidden_at }})</span></div>
+              <form method="post" action="{{ url_for('admin_animal_unhide', animal_id=a.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-success">Przywróć</button>
+              </form>
+            {% elif a.status != 'Draft' %}
+              <form method="post" action="{{ url_for('admin_animal_hide', animal_id=a.id) }}" class="d-flex gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="text" name="reason" class="form-control form-control-sm" placeholder="Powód ukrycia" aria-label="Powód ukrycia" required>
+                <button type="submit" class="btn btn-sm btn-outline-danger">Ukryj</button>
+              </form>
+            {% else %}<span class="text-secondary small">Szkic (niepubliczny)</span>{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="text-center text-secondary py-4">Brak kart.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination_nav(pagination, "admin_animal_list", search=search or None, hidden="1" if hidden_only else None) }}
+</div></div>
+{% endblock %}

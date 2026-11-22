@@ -48,6 +48,10 @@
            href="{{ url_for('panel_dashboard', shelter_id=sid) }}"><i class="bi bi-speedometer2 me-2"></i> Pulpit</a>
       </li>
       <li class="nav-item">
+        <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('panel_animal_') else '' }}"
+           href="{{ url_for('panel_animal_list', shelter_id=sid) }}"><i class="bi bi-balloon-heart me-2"></i> Karty zwierząt</a>
+      </li>
+      <li class="nav-item">
         <a class="nav-link {{ 'active' if request.endpoint == 'panel_shelter_edit' else '' }}"
            href="{{ url_for('panel_shelter_edit', shelter_id=sid) }}"><i class="bi bi-building me-2"></i> Profil placówki</a>
       </li>

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}{{ animal.name }}{% endblock %}
+
+{% block content %}
+<p><a href="{{ url_for('animal_list') }}">← Wszystkie zwierzęta</a></p>
+
+<div class="animal-layout">
+  <div class="gallery">
+    {% if animal.photos %}
+      <div class="main">
+        <img src="{{ url_for('static', filename=animal.photos[0].file_path) }}"
+             alt="{{ animal.photos[0].alt_text or ('Zdjęcie: ' ~ animal.name) }}">
+      </div>
+      {% if animal.photos|length > 1 %}
+      <div class="thumbs">
+        {% for photo in animal.photos[1:] %}
+          <a href="{{ url_for('static', filename=photo.file_path) }}">
+            <img src="{{ url_for('static', filename=photo.file_path) }}"
+                 alt="{{ photo.alt_text or ('Zdjęcie: ' ~ animal.name) }}" loading="lazy"></a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <div>
+    <h1>{{ animal.name }}</h1>
+    <p>
+      <span class="tag">{{ animal.status|label("animal") }}</span>
+      {% for tag in animal.temperament_tags %}<span class="tag">{{ tag }}</span>{% endfor %}
+    </p>
+
+    {% if animal.needs_confirmation %}
+      <p class="alert alert-warning">Dostępność wymaga potwierdzenia. Zanim ruszysz w drogę, skontaktuj się ze schroniskiem.</p>
+    {% endif %}
+    {% if animal.status == 'AdoptionInProgress' %}
+      <p class="alert">Dla tego zwierzęcia trwa już proces adopcyjny, więc nie przyjmujemy nowych zgłoszeń adopcyjnych.</p>
+    {% endif %}
+
+    <dl class="facts">
+      <dt>Gatunek</dt><dd>{{ animal.species|label("species") }}</dd>
+      <dt>Płeć</dt><dd>{{ animal.sex|label("sex") }}</dd>
+      <dt>Rasa</dt><dd>{{ animal.breed or 'nieustalona' }}</dd>
+      <dt>Wiek</dt><dd>{{ animal.age_min_months|age(animal.age_max_months) }}</dd>
+      <dt>Wielkość</dt><dd>{{ animal.size|label("size") if animal.size else 'nieustalona' }}</dd>
+      <dt>Dane potwierdzone</dt><dd>{{ animal.last_confirmed_at[:10] if animal.last_confirmed_at else '—' }}</dd>
+    </dl>
+    {# M4: przycisk ulubionych i dopasowanie. M5: „Zgłoś zainteresowanie”. M7: terminy spacerów. M8: „Nakarm psiaka”. #}
+  </div>
+</div>
+
+<h2>Charakter</h2>
+<p>{{ animal.description }}</p>
+<h2>Codzienne potrzeby</h2>
+<p>{{ animal.daily_needs }}</p>
+
+<h2>Wymagania opiekuńcze</h2>
+{% if animal.requirements %}
+  {% set r = animal.requirements %}
+  <dl class="facts">
+    <dt>Dzieci</dt><dd>{{ r.good_with_children|label("tri_state") }}</dd>
+    <dt>Psy</dt><dd>{{ r.good_with_dogs|label("tri_state") }}</dd>
+    <dt>Koty</dt><dd>{{ r.good_with_cats|label("tri_state") }}</dd>
+    <dt>Aktywność</dt><dd>{{ r.activity_level|label("activity") if r.activity_level else 'nieustalona' }}</dd>
+    <dt>Doświadczenie opiekuna</dt><dd>{{ r.min_experience|label("experience") if r.min_experience else 'nieustalone' }}</dd>
+    <dt>Szczególna opieka</dt><dd>{{ r.special_care_required|label("tri_state") }}{% if r.special_care_notes %}: {{ r.special_care_notes }}{% endif %}</dd>
+  </dl>
+  {% if r.notes_to_discuss %}<p><strong>Do omówienia ze schroniskiem:</strong> {{ r.notes_to_discuss }}</p>{% endif %}
+{% else %}
+  <p>Schronisko nie podało jeszcze wymagań. Zapytaj o szczegóły.</p>
+{% endif %}
+
+<h2>Schronisko</h2>
+<p>
+  <a href="{{ url_for('shelter_details', shelter_id=animal.shelter_id) }}">{{ animal.shelter_name }}</a><br>
+  {{ animal.street_address }}, {{ animal.postal_code }} {{ animal.city }}<br>
+  E-mail: <a href="mailto:{{ animal.contact_email }}">{{ animal.contact_email }}</a>
+  {% if animal.contact_phone %}<br>Telefon: {{ animal.contact_phone }}{% endif %}
+</p>
+{% endblock %}

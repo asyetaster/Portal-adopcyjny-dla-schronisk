@@ -1,6 +1,17 @@
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
+from operations.animal.AddAnimalPhotoCommand import AddAnimalPhotoCommand
+from operations.animal.CreateAnimalProfileCommand import CreateAnimalProfileCommand
+from operations.animal.HideAnimalProfileCommand import HideAnimalProfileCommand
+from operations.animal.PublishAnimalProfileCommand import PublishAnimalProfileCommand
+from operations.animal.UpdateAnimalCareRequirementsCommand import (
+    UpdateAnimalCareRequirementsCommand,
+)
+from operations.animal.UpdateAnimalProfileCommand import UpdateAnimalProfileCommand
+from operations.animal.WithdrawAnimalProfileCommand import WithdrawAnimalProfileCommand
+from operations.demo.animals import ANIMALS, PHOTOS
+
 from operations.shelter.ApproveShelterRegistrationCommand import (
     ApproveShelterRegistrationCommand,
 )
@@ -656,7 +667,8 @@ class SeedDemoDataCommand:
     def execute(self) -> dict:
         ids = self._seed_users()
         shelters = self._seed_shelters(ids)
-        return {"users": len(ids), "shelters": shelters}
+        animals = self._seed_animals(ids)
+        return {"users": len(ids), "shelters": shelters, "animals": animals}
 
     def _seed_users(self) -> dict[str, int]:
         ids = {}
@@ -703,3 +715,69 @@ class SeedDemoDataCommand:
                 )
             created += 1
         return created
+    
+    def _seed_animals(self, ids: dict[str, int]) -> int:
+        """Karty demo w różnych stanach (M3). Pomija karty, które już istnieją."""
+        admin_id = ids["admin@demo.pl"]
+        created = 0
+        for shelter_name, author, data, requirements, state in ANIMALS:
+            shelter_id = self.connection.execute(
+                text("SELECT id FROM shelters WHERE name = :name"), {"name": shelter_name}
+            ).scalar_one_or_none()
+            if shelter_id is None:
+                continue
+            exists = self.connection.execute(
+                text("SELECT 1 FROM animals WHERE shelter_id = :s AND name = :n"),
+                {"s": shelter_id, "n": data["name"]},
+            ).first()
+            if exists:
+                continue
+
+            actor_id = ids[author]
+            animal_id = CreateAnimalProfileCommand(self.connection).execute(
+                actor_id=actor_id, shelter_id=shelter_id,
+                name=data["name"], species=data["species"],
+            )
+            UpdateAnimalProfileCommand(self.connection).execute(
+                actor_id=actor_id, shelter_id=shelter_id, animal_id=animal_id, **data
+            )
+            if requirements:
+                UpdateAnimalCareRequirementsCommand(self.connection).execute(
+                    actor_id=actor_id, shelter_id=shelter_id, animal_id=animal_id, **requirements
+                )
+            if state != "draft":
+                AddAnimalPhotoCommand(self.connection).execute(
+                    actor_id=actor_id, shelter_id=shelter_id, animal_id=animal_id,
+                    file_path=PHOTOS[data["species"]], alt_text=f"Zdjęcie poglądowe: {data['name']}",
+                )
+                PublishAnimalProfileCommand(self.connection).execute(
+                    actor_id=actor_id, shelter_id=shelter_id, animal_id=animal_id
+                )
+            self._apply_state(state, animal_id, shelter_id, actor_id, admin_id)
+            created += 1
+        return created
+
+    def _apply_state(self, state: str, animal_id: int, shelter_id: int, actor_id: int, admin_id: int) -> None:
+        if state == "stale":
+            # Ostatnie potwierdzenie 40 dni temu: karta z ostrzeżeniem (BR-045).
+            self.connection.execute(
+                text("""UPDATE animals SET last_confirmed_at =
+                        strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-40 days') WHERE id = :id"""),
+                {"id": animal_id},
+            )
+        elif state == "in_progress":
+            # Prawdziwe przejście robi StartAnimalAdoptionProcessCommand (M5);
+            # do tego czasu ustawiamy status wprost.
+            self.connection.execute(
+                text("UPDATE animals SET status = 'AdoptionInProgress' WHERE id = :id"),
+                {"id": animal_id},
+            )
+        elif state == "withdrawn":
+            WithdrawAnimalProfileCommand(self.connection).execute(
+                actor_id=actor_id, shelter_id=shelter_id, animal_id=animal_id,
+                reason="Adopcja poza portalem.",
+            )
+        elif state == "hidden":
+            HideAnimalProfileCommand(self.connection).execute(
+                actor_id=admin_id, animal_id=animal_id, reason="Do wyjaśnienia (dane demo).",
+            )

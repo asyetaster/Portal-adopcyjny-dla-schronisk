@@ -1,0 +1,17 @@
+{% extends "panel/base.html" %}
+{% block title %}Edycja: {{ animal.name }}{% endblock %}
+
+{% block content %}
+{% set sid = g.shelter['id'] %}
+<h1 class="h4 mb-4">Edycja karty: {{ animal.name }}</h1>
+<div class="card"><div class="card-body">
+  <form method="post" action="{{ url_for('panel_animal_update', shelter_id=sid, animal_id=animal.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <fieldset {% if g.shelter['status'] == 'Blocked' %}disabled{% endif %}>
+      {% include "panel/animals/_fields.html" %}
+      <button type="submit" class="btn btn-primary">Zapisz</button>
+      <a href="{{ url_for('panel_animal_details', shelter_id=sid, animal_id=animal.id) }}" class="btn btn-outline-secondary">Anuluj</a>
+    </fieldset>
+  </form>
+</div></div>
+{% endblock %}

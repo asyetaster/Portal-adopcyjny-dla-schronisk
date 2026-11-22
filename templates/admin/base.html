@@ -47,6 +47,12 @@
         </a>
       </li>
       <li class="nav-item">
+        <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin_animal_') else '' }}"
+           href="{{ url_for('admin_animal_list') }}">
+          <i class="bi bi-balloon-heart me-2"></i> Karty zwierząt
+        </a>
+      </li>
+      <li class="nav-item">
         <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin_mail_') else '' }}"
            href="{{ url_for('admin_mail_list') }}">
           <i class="bi bi-envelope me-2"></i> Maile

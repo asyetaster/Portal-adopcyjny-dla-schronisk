@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/animal_card.html" import animal_card %}
 {% block title %}{{ shelter.name }}{% endblock %}
 
 {% block content %}
@@ -21,5 +22,14 @@
 <h2>Zasady adopcji</h2>
 <p>{{ shelter.adoption_rules }}</p>
 {% endif %}
-{# Sekcje: zwierzęta (M3), wolontariat (M6), spacery (M7), wsparcie (M8). #}
+<h2>Zwierzęta do adopcji</h2>
+{% if animals %}
+  <div class="animal-grid">{% for a in animals %}{{ animal_card(a, show_shelter=False) }}{% endfor %}</div>
+  {% if animals_total > animals|length %}
+    <p><a href="{{ url_for('animal_list', shelter_id=shelter.id) }}">Zobacz wszystkie ({{ animals_total }}) →</a></p>
+  {% endif %}
+{% else %}
+  <p>Ta placówka nie ma obecnie opublikowanych kart zwierząt.</p>
+{% endif %}
+{# Sekcje: wolontariat (M6), spacery (M7), wsparcie (M8). #}
 {% endblock %}

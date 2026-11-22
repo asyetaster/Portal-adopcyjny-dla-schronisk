@@ -1,0 +1,56 @@
+{% extends "panel/base.html" %}
+{% block title %}Wymagania: {{ animal.name }}{% endblock %}
+
+{% block content %}
+{% set sid = g.shelter['id'] %}
+{% set r = animal.requirements or {} %}
+{% macro tri(name, label, current) %}
+<div class="col-md-6 mb-3">
+  <label for="{{ name }}" class="form-label">{{ label }}</label>
+  <select id="{{ name }}" name="{{ name }}" class="form-select">
+    {% for value, text in tri_state_labels.items() %}
+      <option value="{{ value }}" {% if (current or 'Unknown') == value %}selected{% endif %}>{{ text }}</option>
+    {% endfor %}
+  </select>
+</div>
+{% endmacro %}
+{% macro choice(name, label, options, current) %}
+<div class="col-md-6 mb-3">
+  <label for="{{ name }}" class="form-label">{{ label }}</label>
+  <select id="{{ name }}" name="{{ name }}" class="form-select">
+    <option value="">— brak informacji —</option>
+    {% for value, text in options.items() %}
+      <option value="{{ value }}" {% if current == value %}selected{% endif %}>{{ text }}</option>
+    {% endfor %}
+  </select>
+</div>
+{% endmacro %}
+
+<h1 class="h4 mb-2">Wymagania opiekuńcze: {{ animal.name }}</h1>
+<p class="text-secondary">„Nieznane” to nie to samo co „Nie”. Portal nigdy nie uzna nieznanej odpowiedzi za zgodność.</p>
+<div class="card"><div class="card-body">
+  <form method="post" action="{{ url_for('panel_animal_requirements_update', shelter_id=sid, animal_id=animal.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <fieldset {% if g.shelter['status'] == 'Blocked' %}disabled{% endif %}>
+      <div class="row">
+        {{ tri("good_with_children", "Dobrze znosi dzieci", r.good_with_children) }}
+        {{ tri("good_with_dogs", "Dobrze żyje z psami", r.good_with_dogs) }}
+        {{ tri("good_with_cats", "Dobrze żyje z kotami", r.good_with_cats) }}
+        {{ tri("special_care_required", "Wymaga szczególnej opieki", r.special_care_required) }}
+        {{ choice("activity_level", "Poziom aktywności", activity_labels, r.activity_level) }}
+        {{ choice("min_experience", "Wymagane doświadczenie opiekuna", experience_labels, r.min_experience) }}
+      </div>
+      <div class="mb-3">
+        <label for="special_care_notes" class="form-label">Opis szczególnej opieki</label>
+        <textarea id="special_care_notes" name="special_care_notes" class="form-control" rows="3" maxlength="5000">{{ r.special_care_notes or '' }}</textarea>
+      </div>
+      <div class="mb-3">
+        <label for="notes_to_discuss" class="form-label">Kwestie do omówienia z kandydatem</label>
+        <textarea id="notes_to_discuss" name="notes_to_discuss" class="form-control" rows="3" maxlength="5000">{{ r.notes_to_discuss or '' }}</textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Zapisz</button>
+      <a href="{{ url_for('panel_animal_details', shelter_id=sid, animal_id=animal.id) }}" class="btn btn-outline-secondary">Anuluj</a>
+    </fieldset>
+  </form>
+</div></div>
+{% endblock %}

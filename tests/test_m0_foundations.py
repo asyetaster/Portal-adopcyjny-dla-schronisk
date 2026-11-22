@@ -34,7 +34,7 @@ def test_foreign_keys_are_enforced(app):
 
 def test_begin_immediate_only_for_write_pages_and_flag_does_not_leak(app, client):
     @app.post("/_t/write")
-    @page("home.html", write=True)
+    @page("errors/404.html", write=True)
     def t_write():
         return {}
 
