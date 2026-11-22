@@ -916,3 +916,35 @@ def test_admin_animals_require_admin(app, client, world):
     assert client.get("/admin/animals").status_code == 403
     assert client.post(f"/admin/animals/{animal_id}/hide", data={"reason": "x"}).status_code == 403
     assert _row(app, animal_id)["is_hidden"] == 0
+
+
+# --- Dane demo i runner CLI -------------------------------------------------
+
+def test_seed_creates_demo_cards_idempotently(app, client):
+    from operations.demo.SeedDemoDataCommand import SeedDemoDataCommand
+
+    first = _run(app, SeedDemoDataCommand)
+    assert first["animals"] == 14
+    assert _run(app, SeedDemoDataCommand)["animals"] == 0
+
+    states = {r["name"]: r for r in _sql(app, "SELECT * FROM animals")}
+    assert states["Szkicownik"]["status"] == "Draft"
+    assert states["Pimpek"]["status"] == "Withdrawn"
+    assert states["Azor"]["status"] == "AdoptionInProgress"
+    assert states["Sporny"]["is_hidden"] == 1
+
+    names = _names(_search(app, limit=50))
+    assert "Burek" in names and "Reksio" in names  # zdezaktualizowana zostaje w katalogu
+    assert not {"Szkicownik", "Pimpek", "Sporny", "Azor"} & set(names)
+    assert "Dostępność wymaga potwierdzenia" in client.get("/animals").get_data(as_text=True)
+    assert client.get("/static/img/demo-dog.svg").status_code == 200
+
+
+def test_all_operations_are_discoverable_by_cli_runner():
+    """Jedna operacja z nieobsługiwanym typem psuje test.py dla wszystkich (zasady wspólne, pkt 2)."""
+    import cli
+
+    operations = cli.discover_operations()
+    animal_ops = [n for n, c in operations.items() if c.__module__.startswith("operations.animal.")]
+    assert len(animal_ops) == 16
+    cli.build_parser(operations)  # rzuca OperationError przy złym typie parametru
